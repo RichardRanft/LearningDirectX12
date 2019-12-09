@@ -2,7 +2,6 @@ cmake_minimum_required( VERSION 3.12.1 ) # Latest version of CMake when this fil
 
 set( HEADER_FILES 
     inc/DX12LibPCH.h
-    inc/Application.h
     inc/Buffer.h
     inc/ByteAddressBuffer.h
     inc/CommandList.h
@@ -11,15 +10,12 @@ set( HEADER_FILES
     inc/DescriptorAllocation.h
     inc/DescriptorAllocator.h
     inc/DescriptorAllocatorPage.h
+    inc/Device.h
     inc/DynamicDescriptorHeap.h
-    inc/Events.h
-    inc/Game.h
     inc/GenerateMipsPSO.h
     inc/GUI.h
     inc/Helpers.h
-    inc/HighResolutionClock.h
     inc/IndexBuffer.h
-    inc/KeyCodes.h
     inc/Mesh.h
     inc/PanoToCubemapPSO.h
     inc/RenderTarget.h
@@ -29,18 +25,17 @@ set( HEADER_FILES
     inc/Scene.h
     inc/SceneNode.h
     inc/StructuredBuffer.h
+    inc/SwapChain.h
     inc/Texture.h
     inc/TextureUsage.h
     inc/ThreadSafeQueue.h
     inc/UploadBuffer.h
     inc/VertexBuffer.h
-    inc/Window.h
     inc/d3dx12.h
 )
 
 set( SOURCE_FILES
     src/DX12LibPCH.cpp
-    src/Application.cpp
     src/Buffer.cpp
     src/ByteAddressBuffer.cpp
     src/CommandQueue.cpp
@@ -49,11 +44,10 @@ set( SOURCE_FILES
     src/DescriptorAllocation.cpp
     src/DescriptorAllocator.cpp
     src/DescriptorAllocatorPage.cpp
+    src/Device.cpp
     src/DynamicDescriptorHeap.cpp
-    src/Game.cpp
     src/GenerateMipsPSO.cpp
     src/GUI.cpp
-    src/HighResolutionClock.cpp
     src/IndexBuffer.cpp
     src/Mesh.cpp
     src/PanoToCubemapPSO.cpp
@@ -63,10 +57,10 @@ set( SOURCE_FILES
     src/RootSignature.cpp
     src/SceneNode.cpp
     src/StructuredBuffer.cpp
+    src/SwapChain.cpp
     src/Texture.cpp
     src/UploadBuffer.cpp
     src/VertexBuffer.cpp
-    src/Window.cpp
 )
 
 set( IMGUI_HEADERS
@@ -96,8 +90,7 @@ set( SHADER_FILES
 
 set( RESOURCE_FILES 
     DX12Lib.rc
-    Resources/Icon/app_icon.ico
-	${SHADER_FILES}
+    ${SHADER_FILES}
 )
 
 source_group( "Resources" FILES DX12Lib.rc resource.h )

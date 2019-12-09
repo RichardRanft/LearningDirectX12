@@ -1,39 +1,18 @@
-#include <DX12LibPCH.h>
+#include <GameFrameworkPCH.h>
 
 #include <Window.h>
 
 #include <Application.h>
-#include <CommandQueue.h>
-#include <CommandList.h>
 #include <Game.h>
-#include <GUI.h>
-#include <RenderTarget.h>
-#include <ResourceStateTracker.h>
-#include <Texture.h>
 
-Window::Window(HWND hWnd, const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync )
+Window::Window(HWND hWnd, const std::wstring& windowName, int clientWidth, int clientHeight)
     : m_hWnd(hWnd)
     , m_WindowName(windowName)
     , m_ClientWidth(clientWidth)
     , m_ClientHeight(clientHeight)
-    , m_VSync(vSync)
     , m_Fullscreen(false)
-    , m_FenceValues{0}
-    , m_FrameValues{0}
 {
 	m_DPIScaling = GetDpiForWindow(hWnd) / 96.0f;
-
-    Application& app = Application::Get();
-
-    m_IsTearingSupported = app.IsTearingSupported();
-
-    for (int i = 0; i < BufferCount; ++i)
-    {
-        m_BackBufferTextures[i].SetName(L"Backbuffer[" + std::to_wstring(i) + L"]" );
-    }
-
-    m_dxgiSwapChain = CreateSwapChain();
-    UpdateRenderTargetViews();
 }
 
 Window::~Window()

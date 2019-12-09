@@ -1,18 +1,21 @@
 #include <DX12LibPCH.h>
 
 #include <ByteAddressBuffer.h>
+#include <Device.h>
 
-#include <Application.h>
-
-ByteAddressBuffer::ByteAddressBuffer( const std::wstring& name )
+ByteAddressBuffer::ByteAddressBuffer( 
+    std::shared_ptr<Device> device,
+    const std::wstring& name )
     : Buffer(name)
 	, m_BufferSize(0)
 {
-    m_SRV = Application::Get().AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
-    m_UAV = Application::Get().AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_SRV = device->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_UAV = device->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 }
 
-ByteAddressBuffer::ByteAddressBuffer(const D3D12_RESOURCE_DESC& resDesc,
+ByteAddressBuffer::ByteAddressBuffer(
+    std::shared_ptr<Device> device,
+    const D3D12_RESOURCE_DESC& resDesc,
 	size_t numElements, size_t elementSize,
 	const std::wstring& name)
 	: Buffer(resDesc, numElements, elementSize, name)

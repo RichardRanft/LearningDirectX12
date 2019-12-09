@@ -28,6 +28,7 @@ set_target_properties( assimp IrrXML uninstall UpdateAssimpLibsDebugSymbolsAndDL
 
 add_subdirectory( DirectXTex )
 add_subdirectory( DX12Lib )
+add_subdirectory( GameFramework )
 add_subdirectory( Tutorial1 )
 add_subdirectory( Tutorial2 )
 add_subdirectory( Tutorial3 )

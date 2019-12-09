@@ -1,4 +1,5 @@
-#include <DX12LibPCH.h>
+#include <GameFrameworkPCH.h>
+
 #include <HighResolutionClock.h>
 
 HighResolutionClock::HighResolutionClock()

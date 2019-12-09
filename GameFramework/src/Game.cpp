@@ -1,4 +1,4 @@
-#include <DX12LibPCH.h>
+#include <GameFrameworkPCH.h>
 
 #include <Application.h>
 #include <Game.h>
@@ -19,14 +19,7 @@ Game::~Game()
 
 bool Game::Initialize()
 {
-    // Check for DirectX Math library support.
-    if (!DirectX::XMVerifyCPUSupport())
-    {
-        MessageBoxA(NULL, "Failed to verify DirectX Math library support.", "Error", MB_OK | MB_ICONERROR);
-        return false;
-    }
-
-    m_pWindow = Application::Get().CreateRenderWindow(m_Name, m_Width, m_Height, m_vSync);
+    m_pWindow = Application::Get().CreateGameWindow(m_Name, m_Width, m_Height);
     m_pWindow->RegisterCallbacks(shared_from_this());
     m_pWindow->Show();
 

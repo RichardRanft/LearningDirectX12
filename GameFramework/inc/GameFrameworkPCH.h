@@ -21,70 +21,20 @@
  *  IN THE SOFTWARE.
  */
 
-/**
- *  @file DX12LibPCH.h
- *  @date October 22, 2018
- *  @author Jeremiah van Oosten
- *
- *  @brief Precompiled Header File for DX12Lib.
- */
+ /**
+  *  @file GameFrameworkPCH.h
+  *  @date December 9, 2019
+  *  @author Jeremiah van Oosten
+  *
+  *  @brief Precompiled Header File for GameFramework.
+  */
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <shellapi.h> // For CommandLineToArgvW
 
-// The min/max macros conflict with like-named member functions.
-// Only use std::min and std::max defined in <algorithm>.
-#if defined(min)
-#undef min
-#endif
-
-#if defined(max)
-#undef max
-#endif
-
-// Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
-using namespace Microsoft::WRL;
 
-// DirectX 12 specific headers.
-#include "d3dx12.h"
-#include <dxgi1_6.h>
-#include <d3dcompiler.h>
-#include <DirectXMath.h>
-#include <DirectXTex.h>
-
-using namespace DirectX;
-
-// STL Headers
-#include <algorithm>
-#include <atomic>
 #include <cassert>
-#include <chrono>
-#include <condition_variable>
-#include <filesystem>
 #include <map>
 #include <memory>
-#include <mutex>
-#include <new>
-#include <string>
-#include <unordered_map>
-#include <thread>
-#include <vector>
-
-#if defined(__cpp_lib_filesystem)
-namespace fs = std::filesystem;
-#else 
-namespace fs = std::experimental::filesystem;
-#endif 
-
-// Assimp header files.
-#include <assimp/Importer.hpp>
-#include <assimp/Exporter.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/mesh.h>
-#include <assimp/anim.h>
-
-// Helper functions
-#include <Helpers.h>

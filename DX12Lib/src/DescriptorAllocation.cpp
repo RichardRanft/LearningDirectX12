@@ -1,8 +1,6 @@
 #include <DX12LibPCH.h>
 
 #include <DescriptorAllocation.h>
-
-#include <Application.h>
 #include <DescriptorAllocatorPage.h>
 
 DescriptorAllocation::DescriptorAllocation()
