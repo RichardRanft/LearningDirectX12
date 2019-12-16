@@ -97,16 +97,16 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
 
     return dxgiAdapter4;
 }
-Microsoft::WRL::ComPtr<ID3D12Device2> Device::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
+Microsoft::WRL::ComPtr<ID3D12Device6> Device::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
 {
-    ComPtr<ID3D12Device2> d3d12Device2;
-    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
+    ComPtr<ID3D12Device6> d3d12Device6;
+    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device6)));
     //    NAME_D3D12_OBJECT(d3d12Device2);
 
         // Enable debug messages in debug mode.
 #if defined(_DEBUG)
     ComPtr<ID3D12InfoQueue> pInfoQueue;
-    if (SUCCEEDED(d3d12Device2.As(&pInfoQueue)))
+    if (SUCCEEDED(d3d12Device6.As(&pInfoQueue)))
     {
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -141,7 +141,7 @@ Microsoft::WRL::ComPtr<ID3D12Device2> Device::CreateDevice(Microsoft::WRL::ComPt
     }
 #endif
 
-    return d3d12Device2;
+    return d3d12Device6;
 }
 
 bool Device::CheckTearingSupport()
@@ -194,7 +194,7 @@ DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT nu
     return sampleDesc;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device2> Device::GetDevice() const
+Microsoft::WRL::ComPtr<ID3D12Device6> Device::GetD3D12Device() const
 {
     return m_d3d12Device;
 }

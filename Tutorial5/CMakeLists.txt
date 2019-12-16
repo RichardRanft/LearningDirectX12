@@ -22,6 +22,7 @@ target_include_directories( Tutorial5
 
 target_link_libraries( Tutorial5
     GameFramework
+    DX12Lib
 )
 
 # Set Local Debugger Settings (Command Arguments and Environment Variables)

@@ -1,7 +1,10 @@
 #include <Tutorial5.h>
 
+// GameFramework includes
 #include <Application.h>
 #include <Window.h>
+
+// DX12Lib includes
 
 #include <wrl.h>
 using namespace Microsoft::WRL;

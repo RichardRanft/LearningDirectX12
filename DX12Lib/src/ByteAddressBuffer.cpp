@@ -4,28 +4,26 @@
 #include <Device.h>
 
 ByteAddressBuffer::ByteAddressBuffer( 
-    std::shared_ptr<Device> device,
+    Device& device,
     const std::wstring& name )
-    : Buffer(name)
+    : Buffer(device, name)
 	, m_BufferSize(0)
 {
-    m_SRV = device->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
-    m_UAV = device->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_SRV = device.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_UAV = device.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 }
 
 ByteAddressBuffer::ByteAddressBuffer(
-    std::shared_ptr<Device> device,
+    Device& device,
     const D3D12_RESOURCE_DESC& resDesc,
 	size_t numElements, size_t elementSize,
 	const std::wstring& name)
-	: Buffer(resDesc, numElements, elementSize, name)
+	: Buffer(device, resDesc, numElements, elementSize, name)
 	, m_BufferSize(numElements * elementSize)
 {}
 
 void ByteAddressBuffer::CreateViews( size_t numElements, size_t elementSize )
 {
-    auto device = Application::Get().GetDevice();
-
     // Make sure buffer size is aligned to 4 bytes.
     m_BufferSize = Math::AlignUp( numElements * elementSize, 4 );
 
@@ -36,7 +34,7 @@ void ByteAddressBuffer::CreateViews( size_t numElements, size_t elementSize )
     srvDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
     srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 
-    device->CreateShaderResourceView( m_d3d12Resource.Get(), &srvDesc, m_SRV.GetDescriptorHandle() );
+    m_d3d12Device->CreateShaderResourceView( m_d3d12Resource.Get(), &srvDesc, m_SRV.GetDescriptorHandle() );
 
     D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
     uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -44,5 +42,5 @@ void ByteAddressBuffer::CreateViews( size_t numElements, size_t elementSize )
     uavDesc.Buffer.NumElements = (UINT)m_BufferSize / 4;
     uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-    device->CreateUnorderedAccessView( m_d3d12Resource.Get(), nullptr, &uavDesc, m_UAV.GetDescriptorHandle() );
+    m_d3d12Device->CreateUnorderedAccessView( m_d3d12Resource.Get(), nullptr, &uavDesc, m_UAV.GetDescriptorHandle() );
 }

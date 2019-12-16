@@ -45,7 +45,6 @@ class CommandList;
 class CommandQueue
 {
 public:
-    CommandQueue(D3D12_COMMAND_LIST_TYPE type);
     virtual ~CommandQueue();
 
     // Get an available command list from the command queue.
@@ -66,6 +65,11 @@ public:
 
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
 
+protected:
+    friend class Device;
+
+    CommandQueue(Device& device, D3D12_COMMAND_LIST_TYPE type);
+
 private:
     // Free any command lists that are finished processing on the command queue.
     void ProccessInFlightCommandLists();
@@ -74,6 +78,8 @@ private:
     // The first member is the fence value to wait for, the second is the 
     // a shared pointer to the "in-flight" command list.
     using CommandListEntry = std::tuple<uint64_t, std::shared_ptr<CommandList> >;
+
+    Device& m_Device;
 
     D3D12_COMMAND_LIST_TYPE                         m_CommandListType;
     Microsoft::WRL::ComPtr<ID3D12CommandQueue>      m_d3d12CommandQueue;

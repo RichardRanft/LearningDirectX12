@@ -75,12 +75,12 @@ protected:
     friend class Device;
 
     ByteAddressBuffer(
-        std::shared_ptr<Device> device,
+        Device& device,
         const std::wstring& name
     );
 
     ByteAddressBuffer(
-        std::shared_ptr<Device> device,
+        Device& device,
         const D3D12_RESOURCE_DESC& resDesc,
         size_t numElements, size_t elementSize,
         const std::wstring& name

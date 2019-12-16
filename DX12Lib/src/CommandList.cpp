@@ -2,10 +2,10 @@
 
 #include <CommandList.h>
 
-#include <Application.h>
 #include <ByteAddressBuffer.h>
 #include <ConstantBuffer.h>
 #include <CommandQueue.h>
+#include <Device.h>
 #include <DynamicDescriptorHeap.h>
 #include <GenerateMipsPSO.h>
 #include <IndexBuffer.h>
@@ -22,14 +22,15 @@
 std::map<std::wstring, ID3D12Resource* > CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
 
-CommandList::CommandList( D3D12_COMMAND_LIST_TYPE type )
-    : m_d3d12CommandListType( type )
+CommandList::CommandList(Device& _device, D3D12_COMMAND_LIST_TYPE type)
+    : m_Device(_device)
+    , m_d3d12CommandListType( type )
 {
-    auto device = Application::Get().GetDevice();
+    auto device = m_Device.GetD3D12Device();
 
-    ThrowIfFailed( device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
+    ThrowIfFailed(device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
 
-    ThrowIfFailed( device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(),
+    ThrowIfFailed(device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(),
                                               nullptr, IID_PPV_ARGS( &m_d3d12CommandList ) ) );
 
     m_UploadBuffer = std::make_unique<UploadBuffer>();
@@ -139,7 +140,7 @@ void CommandList::ResolveSubresource( Resource& dstRes, const Resource& srcRes, 
 
 void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags )
 {
-    auto device = Application::Get().GetDevice();
+    auto device = m_Device.GetD3D12Device();
 
     size_t bufferSize = numElements * elementSize;
 
@@ -150,7 +151,7 @@ void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t element
     }
     else
     {
-        ThrowIfFailed( device->CreateCommittedResource( 
+        ThrowIfFailed(device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags),
@@ -165,7 +166,7 @@ void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t element
         {
             // Create an upload resource to use as an intermediate buffer to copy the buffer resource 
             ComPtr<ID3D12Resource> uploadResource;
-            ThrowIfFailed( device->CreateCommittedResource( 
+            ThrowIfFailed(device->CreateCommittedResource(
                 &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
                 D3D12_HEAP_FLAG_NONE,
                 &CD3DX12_RESOURCE_DESC::Buffer(bufferSize),
@@ -307,8 +308,7 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
                 break;
         }
 
-        auto device = Application::Get().GetDevice();
-        Microsoft::WRL::ComPtr<ID3D12Resource> textureResource;
+        auto device = m_Device.GetD3D12Device();        Microsoft::WRL::ComPtr<ID3D12Resource> textureResource;
 
         ThrowIfFailed(device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -359,7 +359,7 @@ void CommandList::GenerateMips( Texture& texture )
     {
         if ( !m_ComputeCommandList )
         {
-            m_ComputeCommandList = Application::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE )->GetCommandList();
+            m_ComputeCommandList = m_Device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE )->GetCommandList();
         }
         m_ComputeCommandList->GenerateMips( texture );
         return;
@@ -395,8 +395,7 @@ void CommandList::GenerateMips( Texture& texture )
     if ( !texture.CheckUAVSupport() || 
        ( resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
     {
-        auto device = Application::Get().GetDevice();
-
+        auto device = m_Device.GetD3D12Device();
         // Describe an alias resource that is used to copy the original texture.
         auto aliasDesc = resourceDesc;
         // Placed resources can't be render targets or depth-stencil views.
@@ -581,7 +580,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
     {
         if (!m_ComputeCommandList)
         {
-            m_ComputeCommandList = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
+            m_ComputeCommandList = m_Device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
         }
         m_ComputeCommandList->PanoToCubemap(cubemapTexture, panoTexture);
         return;
@@ -592,7 +591,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
         m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSO>();
     }
 
-    auto device = Application::Get().GetDevice();
+    auto device = m_Device.GetD3D12Device();
 
     auto cubemapResource = cubemapTexture.GetD3D12Resource();
     if (!cubemapResource) return;
@@ -740,7 +739,7 @@ void CommandList::ClearDepthStencilTexture( const Texture& texture, D3D12_CLEAR_
 
 void CommandList::CopyTextureSubresource( Texture& texture, uint32_t firstSubresource, uint32_t numSubresources, D3D12_SUBRESOURCE_DATA* subresourceData )
 {
-    auto device = Application::Get().GetDevice();
+    auto device = m_Device.GetD3D12Device();
     auto destinationResource = texture.GetD3D12Resource();
 
     if ( destinationResource )

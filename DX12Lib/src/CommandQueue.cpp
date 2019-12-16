@@ -2,16 +2,17 @@
 
 #include <CommandQueue.h>
 
-#include <Application.h>
 #include <CommandList.h>
+#include <Device.h>
 #include <ResourceStateTracker.h>
 
-CommandQueue::CommandQueue(D3D12_COMMAND_LIST_TYPE type)
-    : m_FenceValue(0)
+CommandQueue::CommandQueue(Device& _device, D3D12_COMMAND_LIST_TYPE type)
+    : m_Device(_device)
+    , m_FenceValue(0)
     , m_CommandListType(type)
     , m_bProcessInFlightCommandLists(true)
 {
-    auto device = Application::Get().GetDevice();
+    auto device = m_Device.GetD3D12Device();
 
     D3D12_COMMAND_QUEUE_DESC desc = {};
     desc.Type = type;
@@ -83,6 +84,17 @@ void CommandQueue::Flush()
     WaitForFenceValue( m_FenceValue );
 }
 
+// This struct enables std::make_shared to protected constructor.
+struct MakeCommandList : public CommandList
+{
+public:
+    typedef CommandList super;
+
+    MakeCommandList(Device& device, D3D12_COMMAND_LIST_TYPE type)
+    : super(device, type)
+    {}
+};
+
 std::shared_ptr<CommandList> CommandQueue::GetCommandList()
 {
     std::shared_ptr<CommandList> commandList;
@@ -95,7 +107,7 @@ std::shared_ptr<CommandList> CommandQueue::GetCommandList()
     else
     {
         // Otherwise create a new command list.
-        commandList = std::make_shared<CommandList>(m_CommandListType);
+        commandList = std::make_shared<MakeCommandList>(m_Device, m_CommandListType);
     }
 
     return commandList;
@@ -163,7 +175,7 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
     // after the initial resource command lists have finished.
     if ( generateMipsCommandLists.size() > 0 )
     {
-        auto computeQueue = Application::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE );
+        auto computeQueue = m_Device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE );
         computeQueue->Wait( *this );
         computeQueue->ExecuteCommandLists( generateMipsCommandLists );
     }

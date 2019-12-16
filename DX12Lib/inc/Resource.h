@@ -37,17 +37,9 @@
 #include <memory>
 #include <string>
 
-class Device;
-
 class Resource
 {
 public:
-    explicit Resource(const std::wstring& name = L"");
-    explicit Resource(const D3D12_RESOURCE_DESC& resourceDesc, 
-        const D3D12_CLEAR_VALUE* clearValue = nullptr,
-        const std::wstring& name = L"");
-    explicit Resource(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const std::wstring& name = L"");
-
     Resource(const Resource& copy);
     Resource(Resource&& copy);
 
@@ -123,7 +115,18 @@ public:
     
 
 protected:
-    // The underlying D3D12 resource.
+    friend class Device;
+
+    Resource(Device& device, const std::wstring& name = L"");
+    Resource(Device& device,
+        const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_CLEAR_VALUE* clearValue = nullptr,
+        const std::wstring& name = L"");
+    Resource(Device& device,
+        Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+        const std::wstring& name = L"");
+    
+    Microsoft::WRL::ComPtr<ID3D12Device> m_d3d12Device;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_d3d12Resource;
     D3D12_FEATURE_DATA_FORMAT_SUPPORT m_FormatSupport;
     std::unique_ptr<D3D12_CLEAR_VALUE> m_d3d12ClearValue;

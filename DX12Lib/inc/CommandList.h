@@ -61,7 +61,6 @@ class VertexBuffer;
 class CommandList
 {
 public:
-    CommandList( D3D12_COMMAND_LIST_TYPE type );
     virtual ~CommandList();
 
     /**
@@ -399,6 +398,8 @@ public:
 
 protected:
 
+    CommandList(Device& device, D3D12_COMMAND_LIST_TYPE type);
+
 private:
     void TrackResource(Microsoft::WRL::ComPtr<ID3D12Object> object);
     void TrackResource(const Resource& res);
@@ -413,6 +414,8 @@ private:
     void BindDescriptorHeaps();
 
     using TrackedObjects = std::vector < Microsoft::WRL::ComPtr<ID3D12Object> >;
+
+    Device& m_Device;
 
     D3D12_COMMAND_LIST_TYPE m_d3d12CommandListType;
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> m_d3d12CommandList;
