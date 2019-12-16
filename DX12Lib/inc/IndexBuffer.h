@@ -35,7 +35,6 @@
 class IndexBuffer : public Buffer
 {
 public:
-    IndexBuffer( const std::wstring& name = L"");
     virtual ~IndexBuffer();
 
     // Inherited from Buffer
@@ -70,6 +69,9 @@ public:
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override;
 
 protected:
+    friend class Device;
+
+    IndexBuffer(Device& device, const std::wstring& name = L"");
 
 private:
     size_t m_NumIndicies;

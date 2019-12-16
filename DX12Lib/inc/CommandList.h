@@ -44,6 +44,7 @@
 class Buffer;
 class ByteAddressBuffer;
 class ConstantBuffer;
+class Device;
 class DynamicDescriptorHeap;
 class GenerateMipsPSO;
 class IndexBuffer;

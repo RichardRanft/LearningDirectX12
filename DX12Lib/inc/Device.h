@@ -85,6 +85,30 @@ public:
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type);
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
+    /**
+     * Increment the frame counter and return the previous frame count.
+     */
+    uint64_t IncrementFrameCounter()
+    {
+        return m_FrameCounter++;
+    }
+
+    /**
+     * Get the current frame counter value.
+     */
+    uint64_t GetFrameCounter()
+    {
+        return m_FrameCounter;
+    }
+
+    /**
+     * Reset the frame counter to 0.
+     */
+    void ResetFrameCounter()
+    {
+        m_FrameCounter = 0ull;
+    }
+
 protected:
 
     Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool bUseWarp);
@@ -99,6 +123,8 @@ private:
     std::shared_ptr<CommandQueue> m_CopyCommandQueue;
 
     std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+
+    uint64_t m_FrameCounter;
 
     bool m_TearingSupported;
 };

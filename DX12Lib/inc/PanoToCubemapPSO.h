@@ -64,8 +64,6 @@ namespace PanoToCubemapRS
 class PanoToCubemapPSO
 {
 public:
-    PanoToCubemapPSO();
-
     const RootSignature& GetRootSignature() const
     {
         return m_RootSignature;
@@ -81,7 +79,13 @@ public:
         return m_DefaultUAV.GetDescriptorHandle();
     }
 
+protected:
+    friend class Device;
+
+    PanoToCubemapPSO(Device& device);
+
 private:
+    Device& m_Device;
     RootSignature m_RootSignature;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
     // Default (no resource) UAV's to pad the unused UAV descriptors.

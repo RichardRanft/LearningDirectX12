@@ -6,6 +6,7 @@
 #include <DescriptorAllocator.h>
 
 Device::Device()
+    : m_FrameCounter(0)
 {
     // Check for DirectX Math library support.
     if (!DirectX::XMVerifyCPUSupport())

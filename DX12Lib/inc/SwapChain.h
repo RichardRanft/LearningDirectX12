@@ -78,8 +78,9 @@ private:
     // Number of swapchain back buffers.
     static const UINT BufferCount = 3;
 
-    SwapChain(HWND hWnd, std::shared_ptr<Device> device);
+    SwapChain(Device& device, HWND hWnd);
 
+    Device& m_Device;
     HWND m_hWnd;
 
     bool m_VSync;
@@ -87,6 +88,7 @@ private:
 
     UINT64 m_FenceValues[BufferCount];
     uint64_t m_FrameValues[BufferCount];
+    uint64_t m_FrameCounter;
 
     Microsoft::WRL::ComPtr<IDXGISwapChain4> m_dxgiSwapChain;
     HANDLE m_SwapChainEvent;
@@ -96,5 +98,6 @@ private:
     mutable RenderTarget m_RenderTarget;
 
     UINT m_CurrentBackBufferIndex;
+
 
 };

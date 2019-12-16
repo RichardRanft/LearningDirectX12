@@ -2,13 +2,12 @@
 
 #include <GUI.h>
 
-#include <Application.h>
 #include <CommandQueue.h>
 #include <CommandList.h>
+#include <Device.h>
 #include <RenderTarget.h>
 #include <RootSignature.h>
 #include <Texture.h>
-#include <Window.h>
 
 // Include compiled shaders for ImGui.
 #include <ImGUI_VS.h>
@@ -35,8 +34,9 @@ void GetSurfaceInfo(
     _Out_opt_ size_t* outRowBytes,
     _Out_opt_ size_t* outNumRows );
 
-GUI::GUI()
-    : m_pImGuiCtx( nullptr )
+GUI::GUI(Device& device)
+    : m_Device(device)
+    , m_pImGuiCtx( nullptr )
 {}
 
 GUI::~GUI()
@@ -44,19 +44,18 @@ GUI::~GUI()
     Destroy();
 }
 
-bool GUI::Initialize( std::shared_ptr<Window> window )
+bool GUI::Initialize( HWND window )
 {
-    m_Window = window;
     m_pImGuiCtx = ImGui::CreateContext();
     ImGui::SetCurrentContext( m_pImGuiCtx );
-    if ( !m_Window || !ImGui_ImplWin32_Init( m_Window->GetWindowHandle() ) )
+    if ( !ImGui_ImplWin32_Init( window ) )
     {
         return false;
     }
 
     ImGuiIO& io = ImGui::GetIO();
 
-	io.FontGlobalScale = window->GetDPIScaling();
+	io.FontGlobalScale = ::GetDpiForWindow(window) / 96.0f; // window->GetDPIScaling();
 	// Allow user UI scaling using CTRL+Mouse Wheel scrolling
 	io.FontAllowUserScaling = true;
 
@@ -65,8 +64,8 @@ bool GUI::Initialize( std::shared_ptr<Window> window )
     int width, height;
     io.Fonts->GetTexDataAsRGBA32( &pixelData, &width, &height );
 
-    auto device = Application::Get().GetDevice();
-    auto commandQueue = Application::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
+    auto device = m_Device.GetD3D12Device();
+    auto commandQueue = m_Device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
     auto fontTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R8G8B8A8_UNORM, width, height );
@@ -286,18 +285,15 @@ void GUI::Render( std::shared_ptr<CommandList> commandList, const RenderTarget& 
 
 void GUI::Destroy()
 {
-    if ( m_Window )
-    {
-        ImGui_ImplWin32_Shutdown();
-        ImGui::DestroyContext( m_pImGuiCtx );
-        m_pImGuiCtx = nullptr;
-        m_Window.reset();
-    }
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext( m_pImGuiCtx );
+    m_pImGuiCtx = nullptr;
 }
 
 void GUI::SetScaling(float scale)
 {
-
+    ImGuiIO& io = ImGui::GetIO();
+    io.FontGlobalScale = scale;
 }
 
 //--------------------------------------------------------------------------------------

@@ -73,6 +73,7 @@ public:
 
 protected:
     friend class Device;
+    friend class StructuredBuffer;
 
     ByteAddressBuffer(
         Device& device,

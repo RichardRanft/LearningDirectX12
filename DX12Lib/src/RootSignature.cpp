@@ -2,18 +2,21 @@
 
 #include <RootSignature.h>
 
-#include <Application.h>
+#include <Device.h>
 
-RootSignature::RootSignature()
-    : m_RootSignatureDesc{}
+RootSignature::RootSignature(Device& device)
+    : m_Device(device)
+    , m_RootSignatureDesc{}
     , m_NumDescriptorsPerTable{ 0 }
     , m_SamplerTableBitMask(0)
     , m_DescriptorTableBitMask(0)
 {}
 
 RootSignature::RootSignature(
+    Device& device,
     const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion )
-    : m_RootSignatureDesc{}
+    : m_Device(device)
+    , m_RootSignatureDesc{}
     , m_NumDescriptorsPerTable{ 0 }
     , m_SamplerTableBitMask(0)
     , m_DescriptorTableBitMask(0)
@@ -59,8 +62,6 @@ void RootSignature::SetRootSignatureDesc(
     // Make sure any previously allocated root signature description is cleaned 
     // up first.
     Destroy();
-
-    auto device = Application::Get().GetDevice();
 
     UINT numParameters = rootSignatureDesc.NumParameters;
     D3D12_ROOT_PARAMETER1* pParameters = numParameters > 0 ? new D3D12_ROOT_PARAMETER1[numParameters] : nullptr;
@@ -131,6 +132,8 @@ void RootSignature::SetRootSignatureDesc(
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
     ThrowIfFailed(D3DX12SerializeVersionedRootSignature( &versionRootSignatureDesc,
                                                         rootSignatureVersion, &rootSignatureBlob, &errorBlob ) );
+
+    auto device = m_Device.GetD3D12Device();
 
     // Create the root signature.
     ThrowIfFailed(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),

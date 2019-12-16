@@ -38,10 +38,6 @@
 class StructuredBuffer : public Buffer
 {
 public:
-    StructuredBuffer( const std::wstring& name = L"" );
-    StructuredBuffer( const D3D12_RESOURCE_DESC& resDesc, 
-        size_t numElements, size_t elementSize,
-        const std::wstring& name = L"");
 
     /**
     * Get the number of elements contained in this buffer.
@@ -86,6 +82,14 @@ public:
     {
         return m_CounterBuffer;
     }
+
+protected:
+    friend class Device;
+
+    StructuredBuffer(Device& device, const std::wstring& name = L"");
+    StructuredBuffer(Device& device, const D3D12_RESOURCE_DESC& resDesc,
+        size_t numElements, size_t elementSize,
+        const std::wstring& name = L"");
 
 private:
     size_t m_NumElements;

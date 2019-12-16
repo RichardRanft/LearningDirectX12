@@ -1,22 +1,22 @@
 #include <DX12LibPCH.h>
 
 #include <DescriptorAllocatorPage.h>
-#include <Application.h>
+#include <Device.h>
 
-DescriptorAllocatorPage::DescriptorAllocatorPage( D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors )
+DescriptorAllocatorPage::DescriptorAllocatorPage(Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors )
     : m_HeapType( type )
     , m_NumDescriptorsInHeap( numDescriptors )
 {
-    auto device = Application::Get().GetDevice();
+    auto d3d12Device = device.GetD3D12Device();
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
     heapDesc.Type = m_HeapType;
     heapDesc.NumDescriptors = m_NumDescriptorsInHeap;
 
-    ThrowIfFailed( device->CreateDescriptorHeap( &heapDesc, IID_PPV_ARGS( &m_d3d12DescriptorHeap ) ) );
+    ThrowIfFailed(d3d12Device->CreateDescriptorHeap( &heapDesc, IID_PPV_ARGS( &m_d3d12DescriptorHeap ) ) );
 
     m_BaseDescriptor = m_d3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-    m_DescriptorHandleIncrementSize = device->GetDescriptorHandleIncrementSize( m_HeapType );
+    m_DescriptorHandleIncrementSize = d3d12Device->GetDescriptorHandleIncrementSize( m_HeapType );
     m_NumFreeHandles = m_NumDescriptorsInHeap;
 
     // Initialize the free lists

@@ -36,20 +36,18 @@
 #include <wrl.h>
 
 class CommandList;
+class Device;
 class Texture;
 class RenderTarget;
 class RootSignature;
-class Window;
-
 
 class GUI
 {
 public:
-    GUI();
     virtual ~GUI();
 
     // Initialize the ImGui context.
-    virtual bool Initialize( std::shared_ptr<Window> window );
+    virtual bool Initialize( HWND window );
 
     // Begin a new frame.
     virtual void NewFrame();
@@ -62,11 +60,12 @@ public:
 	void SetScaling(float scale);
 
 protected:
+    GUI(Device& device);
 
 private:
+    Device& m_Device;
     ImGuiContext* m_pImGuiCtx;
     std::unique_ptr<Texture> m_FontTexture;
     std::unique_ptr<RootSignature> m_RootSignature;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
-    std::shared_ptr<Window> m_Window;
 };

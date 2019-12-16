@@ -40,16 +40,11 @@
 
 #include <vector>
 
+class Device;
+
 class RootSignature
 {
 public:
-    // TODO: Add (deep) copy/move constructors and assignment operators!
-    RootSignature();
-    RootSignature(
-        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc, 
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
-    );
-
     virtual ~RootSignature();
 
     void Destroy();
@@ -73,8 +68,16 @@ public:
     uint32_t GetNumDescriptors(uint32_t rootIndex) const;
 
 protected:
+    // TODO: Add (deep) copy/move constructors and assignment operators!
+    RootSignature(Device& device);
+    RootSignature(
+        Device& device,
+        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
+    );
 
 private:
+    Device& m_Device;
     D3D12_ROOT_SIGNATURE_DESC1 m_RootSignatureDesc;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 

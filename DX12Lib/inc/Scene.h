@@ -35,7 +35,11 @@
 #include <memory>
 #include <string>
 
+#if defined(__cpp_lib_filesystem)
+namespace fs = std::filesystem;
+#else
 namespace fs = std::experimental::filesystem;
+#endif
 
 class aiMaterial;
 class aiMesh;

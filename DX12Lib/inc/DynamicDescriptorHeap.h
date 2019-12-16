@@ -43,14 +43,12 @@
 #include <queue>
 
 class CommandList;
+class Device;
 class RootSignature;
 
 class DynamicDescriptorHeap
 {
 public:
-    DynamicDescriptorHeap(
-        D3D12_DESCRIPTOR_HEAP_TYPE heapType,
-        uint32_t numDescriptorsPerHeap = 1024);
 
     virtual ~DynamicDescriptorHeap();
 
@@ -108,6 +106,10 @@ public:
     void Reset();
 
 protected:
+    DynamicDescriptorHeap(
+        Device& device,
+        D3D12_DESCRIPTOR_HEAP_TYPE heapType,
+        uint32_t numDescriptorsPerHeap = 1024 );
 
 private:
     // Request a descriptor heap if one is available.
@@ -180,6 +182,7 @@ private:
 
     using DescriptorHeapPool = std::queue< Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> >;
 
+    Device& m_Device;
     DescriptorHeapPool m_DescriptorHeapPool;
     DescriptorHeapPool m_AvailableDescriptorHeaps;
 

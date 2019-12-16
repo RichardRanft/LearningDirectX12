@@ -5,17 +5,18 @@
 // Compiled shader
 #include <PanoToCubemap_CS.h>
 
-#include <Application.h>
+#include <Device.h>
 
 #include <d3dx12.h>
 
-PanoToCubemapPSO::PanoToCubemapPSO()
+PanoToCubemapPSO::PanoToCubemapPSO(Device& device)
+    : m_Device(device)
 {
-    auto device = Application::Get().GetDevice();
+    auto d3d12Device = m_Device.GetD3D12Device();
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+    if (FAILED(d3d12Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
     {
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
@@ -54,11 +55,11 @@ PanoToCubemapPSO::PanoToCubemapPSO()
         sizeof(PipelineStateStream), &pipelineStateStream
     };
 
-    ThrowIfFailed(device->CreatePipelineState(&pipelineStateStreamDesc, IID_PPV_ARGS(&m_PipelineState)));
+    ThrowIfFailed(d3d12Device->CreatePipelineState(&pipelineStateStreamDesc, IID_PPV_ARGS(&m_PipelineState)));
 
     // Create some default texture UAV's to pad any unused UAV's during mip map generation.
-    m_DefaultUAV = Application::Get().AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5);
-    UINT descriptorHandleIncrementSize = Application::Get().GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    m_DefaultUAV = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5);
+    UINT descriptorHandleIncrementSize = m_Device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
     for (UINT i = 0; i < 5; ++i)
     {
@@ -70,6 +71,6 @@ PanoToCubemapPSO::PanoToCubemapPSO()
         uavDesc.Texture2DArray.MipSlice = i;
         uavDesc.Texture2DArray.PlaneSlice = 0;
 
-        device->CreateUnorderedAccessView(nullptr, nullptr, &uavDesc, m_DefaultUAV.GetDescriptorHandle(i));
+        d3d12Device->CreateUnorderedAccessView(nullptr, nullptr, &uavDesc, m_DefaultUAV.GetDescriptorHandle(i));
     }
 }

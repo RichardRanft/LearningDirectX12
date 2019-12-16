@@ -36,7 +36,6 @@
 class VertexBuffer : public Buffer
 {
 public:
-    VertexBuffer(const std::wstring& name = L"");
     virtual ~VertexBuffer();
 
     // Inherited from Buffer
@@ -71,7 +70,9 @@ public:
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override;
 
 protected:
+    friend class Device;
 
+    VertexBuffer(Device& device, const std::wstring& name = L"");
 private:
     size_t m_NumVertices;
     size_t m_VertexStride;

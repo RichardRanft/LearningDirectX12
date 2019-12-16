@@ -37,6 +37,7 @@
 #include <DirectXMath.h>
 #include <wrl.h>
 
+class Device;
 
 struct alignas( 16 ) GenerateMipsCB
 {
@@ -63,8 +64,6 @@ namespace GenerateMips
 class GenerateMipsPSO
 {
 public:
-    GenerateMipsPSO();
-
     const RootSignature& GetRootSignature() const
     {
         return m_RootSignature;
@@ -79,6 +78,9 @@ public:
     {
         return m_DefaultUAV.GetDescriptorHandle();
     }
+
+protected:
+    GenerateMipsPSO(Device& device);
 
 private:
     RootSignature m_RootSignature;

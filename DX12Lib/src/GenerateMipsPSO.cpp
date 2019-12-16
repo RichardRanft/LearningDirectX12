@@ -4,18 +4,18 @@
 
 #include <GenerateMips_CS.h>
 
-#include <Application.h>
+#include <Device.h>
 #include <Helpers.h>
 
 #include <d3dx12.h>
 
-GenerateMipsPSO::GenerateMipsPSO()
+GenerateMipsPSO::GenerateMipsPSO(Device& device)
 {
-    auto device = Application::Get().GetDevice();
+    auto d3d12Device = device.GetD3D12Device();
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    if ( FAILED( device->CheckFeatureSupport( D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof( featureData ) ) ) )
+    if ( FAILED( d3d12Device->CheckFeatureSupport( D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof( featureData ) ) ) )
     {
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
@@ -60,10 +60,10 @@ GenerateMipsPSO::GenerateMipsPSO()
         sizeof( PipelineStateStream ), &pipelineStateStream
     };
 
-    ThrowIfFailed( device->CreatePipelineState( &pipelineStateStreamDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
+    ThrowIfFailed( d3d12Device->CreatePipelineState( &pipelineStateStreamDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
 
     // Create some default texture UAV's to pad any unused UAV's during mip map generation.
-    m_DefaultUAV = Application::Get().AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 );
+    m_DefaultUAV = device.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 );
 
     for ( UINT i = 0; i < 4; ++i )
     {
@@ -73,7 +73,7 @@ GenerateMipsPSO::GenerateMipsPSO()
         uavDesc.Texture2D.MipSlice = i;
         uavDesc.Texture2D.PlaneSlice = 0;
 
-        device->CreateUnorderedAccessView( 
+        d3d12Device->CreateUnorderedAccessView( 
             nullptr, nullptr, &uavDesc, 
             m_DefaultUAV.GetDescriptorHandle(i) 
         );

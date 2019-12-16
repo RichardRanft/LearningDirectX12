@@ -1,9 +1,6 @@
 #include <DX12LibPCH.h>
 #include <Mesh.h>
 
-#include <Application.h>
-
-
 using namespace DirectX;
 using namespace Microsoft::WRL;
 
