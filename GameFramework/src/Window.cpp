@@ -5,6 +5,16 @@
 #include <Application.h>
 #include <Game.h>
 
+#include <algorithm>
+
+#ifdef min
+#undef min
+#endif
+
+#ifdef max
+#undef max
+#endif
+
 Window::Window(HWND hWnd, const std::wstring& windowName, int clientWidth, int clientHeight)
     : m_hWnd(hWnd)
     , m_WindowName(windowName)
@@ -20,14 +30,10 @@ Window::~Window()
     // Window should be destroyed with Application::DestroyWindow before
     // the window goes out of scope.
     assert(!m_hWnd && "Use Application::DestroyWindow before destruction.");
-
-	::CloseHandle(m_SwapChainEvent);
 }
 
 void Window::Initialize()
-{
-    m_GUI.Initialize( shared_from_this() );
-}
+{}
 
 
 HWND Window::GetWindowHandle() const
@@ -60,8 +66,6 @@ void Window::Hide()
 
 void Window::Destroy()
 {
-    m_GUI.Destroy();
-
     if (auto pGame = m_pGame.lock())
     {
         // Notify the registered game that the window is being destroyed.
@@ -83,21 +87,6 @@ int Window::GetClientWidth() const
 int Window::GetClientHeight() const
 {
     return m_ClientHeight;
-}
-
-bool Window::IsVSync() const
-{
-    return m_VSync;
-}
-
-void Window::SetVSync(bool vSync)
-{
-    m_VSync = vSync;
-}
-
-void Window::ToggleVSync()
-{
-    SetVSync(!m_VSync);
 }
 
 bool Window::IsFullScreen() const
@@ -173,11 +162,6 @@ void Window::RegisterCallbacks(std::shared_ptr<Game> pGame)
 
 void Window::OnUpdate(UpdateEventArgs& e)
 {
-	// Wait for the swapchain to finish presenting
-	::WaitForSingleObjectEx(m_SwapChainEvent, 100, TRUE);
-
-    m_GUI.NewFrame();
-
     m_UpdateClock.Tick();
 
     if (auto pGame = m_pGame.lock())
@@ -266,25 +250,6 @@ void Window::OnResize(ResizeEventArgs& e)
     {
         m_ClientWidth = std::max(1, e.Width);
         m_ClientHeight = std::max(1, e.Height);
-
-        Application::Get().Flush();
-
-        // Release all references to back buffer textures.
-        m_RenderTarget.AttachTexture( Color0, Texture() );
-        for (int i = 0; i < BufferCount; ++i)
-        {
-            ResourceStateTracker::RemoveGlobalResourceState(m_BackBufferTextures[i].GetD3D12Resource().Get());
-            m_BackBufferTextures[i].Reset();
-        }
-
-        DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-        ThrowIfFailed(m_dxgiSwapChain->GetDesc(&swapChainDesc));
-        ThrowIfFailed(m_dxgiSwapChain->ResizeBuffers(BufferCount, m_ClientWidth,
-            m_ClientHeight, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
-
-        m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
-
-        UpdateRenderTargetViews();
     }
 
     if (auto pGame = m_pGame.lock())
@@ -301,121 +266,8 @@ void Window::OnDPIScaleChanged(DPIScaleEventArgs& e)
 	}
 }
 
-Microsoft::WRL::ComPtr<IDXGISwapChain4> Window::CreateSwapChain()
-{
-    Application& app = Application::Get();
-
-    ComPtr<IDXGISwapChain4> dxgiSwapChain4;
-    ComPtr<IDXGIFactory4> dxgiFactory4;
-    UINT createFactoryFlags = 0;
-#if defined(_DEBUG)
-    createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-    ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory4)));
-
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.Width = m_ClientWidth;
-    swapChainDesc.Height = m_ClientHeight;
-    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.Stereo = FALSE;
-    swapChainDesc.SampleDesc = { 1, 0 };
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = BufferCount;
-    swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-    // It is recommended to always allow tearing if tearing support is available.
-    swapChainDesc.Flags = m_IsTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-	swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
-    ID3D12CommandQueue* pCommandQueue = app.GetCommandQueue()->GetD3D12CommandQueue().Get();
-
-    ComPtr<IDXGISwapChain1> swapChain1;
-    ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
-        pCommandQueue,
-        m_hWnd,
-        &swapChainDesc,
-        nullptr,
-        nullptr,
-        &swapChain1));
-
-    // Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
-    // will be handled manually.
-    ThrowIfFailed(dxgiFactory4->MakeWindowAssociation(m_hWnd, DXGI_MWA_NO_ALT_ENTER));
-
-    ThrowIfFailed(swapChain1.As(&dxgiSwapChain4));
-
-    m_CurrentBackBufferIndex = dxgiSwapChain4->GetCurrentBackBufferIndex();
-	dxgiSwapChain4->SetMaximumFrameLatency(BufferCount-1);
-	m_SwapChainEvent = dxgiSwapChain4->GetFrameLatencyWaitableObject();
-
-    return dxgiSwapChain4;
-}
-
-void Window::UpdateRenderTargetViews()
-{
-    for (int i = 0; i < BufferCount; ++i )
-    {
-        ComPtr<ID3D12Resource> backBuffer;
-        ThrowIfFailed(m_dxgiSwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-        
-        ResourceStateTracker::AddGlobalResourceState(backBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
-
-        m_BackBufferTextures[i].SetD3D12Resource(backBuffer);
-        m_BackBufferTextures[i].CreateViews();
-    }
-}
-
 void Window::SetDPIScaling(float dpiScaling)
 {
 	m_DPIScaling = dpiScaling;
 }
 
-const RenderTarget& Window::GetRenderTarget() const
-{
-    m_RenderTarget.AttachTexture( AttachmentPoint::Color0, m_BackBufferTextures[m_CurrentBackBufferIndex] );
-    return m_RenderTarget;
-}
-
-UINT Window::Present( const Texture& texture )
-{
-    auto commandQueue = Application::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
-    auto commandList = commandQueue->GetCommandList();
-
-    auto& backBuffer = m_BackBufferTextures[m_CurrentBackBufferIndex];
-
-    if( texture.IsValid() )
-    {
-        if ( texture.GetD3D12ResourceDesc().SampleDesc.Count > 1 )
-        {
-            commandList->ResolveSubresource( backBuffer, texture );
-        }
-        else
-        {
-            commandList->CopyResource( backBuffer, texture );
-        }
-    }
-
-    RenderTarget renderTarget;
-    renderTarget.AttachTexture( AttachmentPoint::Color0, backBuffer );
-
-    m_GUI.Render( commandList, renderTarget );
-
-    commandList->TransitionBarrier( backBuffer, D3D12_RESOURCE_STATE_PRESENT );
-    commandQueue->ExecuteCommandList( commandList );
-
-    UINT syncInterval = m_VSync ? 1 : 0;
-    UINT presentFlags = m_IsTearingSupported && !m_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
-    ThrowIfFailed(m_dxgiSwapChain->Present(syncInterval, presentFlags));
-
-    m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->Signal();
-    m_FrameValues[m_CurrentBackBufferIndex] = Application::GetFrameCount();
-
-    m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
-
-    commandQueue->WaitForFenceValue( m_FenceValues[m_CurrentBackBufferIndex] );
-
-    Application::Get().ReleaseStaleDescriptors( m_FrameValues[m_CurrentBackBufferIndex] );
-
-    return m_CurrentBackBufferIndex;
-}

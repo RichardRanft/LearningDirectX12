@@ -2,7 +2,7 @@
 
 #include <ConstantBuffer.h>
 
-#include <Application.h>
+#include <Device.h>
 
 #include <d3dx12.h>
 

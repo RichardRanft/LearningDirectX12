@@ -72,13 +72,6 @@ public:
     int GetClientHeight() const;
 
     /**
-    * Should this window be rendered with vertical refresh synchronization.
-    */
-    bool IsVSync() const;
-    void SetVSync(bool vSync);
-    void ToggleVSync();
-
-    /**
     * Is this a windowed window or full-screen?
     */
     bool IsFullScreen() const;
@@ -160,14 +153,10 @@ private:
     std::weak_ptr<Game> m_pGame;
 
     RECT m_WindowRect;
-    bool m_IsTearingSupported;
 
     int m_PreviousMouseX;
     int m_PreviousMouseY;
 
-//    GUI m_GUI;
-
     // Per-window DPI scaling.
     float m_DPIScaling;
-
 };

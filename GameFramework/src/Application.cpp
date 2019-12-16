@@ -26,8 +26,8 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler( HWND hWnd, UINT msg, WPARAM wPara
 // class are protected and not accessible by the std::make_shared method.
 struct MakeWindow : public Window 
 {
-    MakeWindow(HWND hWnd, const std::wstring& windowName, int clientWidth, int clientHeight, bool vSync)
-        : Window(hWnd, windowName, clientWidth, clientHeight, vSync)
+    MakeWindow(HWND hWnd, const std::wstring& windowName, int clientWidth, int clientHeight)
+        : Window(hWnd, windowName, clientWidth, clientHeight)
     {}
 };
 
