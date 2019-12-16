@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- *  Copyright(c) 2018 Jeremiah van Oosten
+ *  Copyright(c) 2019 Jeremiah van Oosten
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files(the "Software"), to deal
@@ -23,34 +23,26 @@
  */
 
 /**
- *  @file Tutorial4.h
- *  @date October 24, 2018
+ *  @file Tutorial5.h
+ *  @date December 16, 2019
  *  @author Jeremiah van Oosten
  *
  *  @brief Tutorial 4.
  */
 
+#include "Camera.h"
 
-#include <Camera.h>
 #include <Game.h>
-#include <IndexBuffer.h>
-#include <Light.h>
-#include <Window.h>
-#include <Mesh.h>
-#include <RenderTarget.h>
-#include <RootSignature.h>
-#include <Texture.h>
-#include <VertexBuffer.h>
 
 #include <DirectXMath.h>
 
-class Tutorial4 : public Game
+class Tutorial5 : public Game
 {
 public:
     using super = Game;
 
-    Tutorial4(const std::wstring& name, int width, int height, bool vSync = false);
-    virtual ~Tutorial4();
+    Tutorial5(const std::wstring& name, int width, int height, bool vSync = false);
+    virtual ~Tutorial5();
 
     /**
      *  Load content required for the demo.
@@ -93,7 +85,6 @@ protected:
      */
     virtual void OnMouseWheel(MouseWheelEventArgs& e) override;
 
-    void RescaleHDRRenderTarget(float scale);
     virtual void OnResize(ResizeEventArgs& e) override; 
 
 	virtual void OnDPIScaleChanged(DPIScaleEventArgs& e) override;
@@ -101,39 +92,6 @@ protected:
     void OnGUI();
 
 private:
-    // Some geometry to render.
-    std::unique_ptr<Mesh> m_CubeMesh;
-    std::unique_ptr<Mesh> m_SphereMesh;
-    std::unique_ptr<Mesh> m_ConeMesh;
-    std::unique_ptr<Mesh> m_TorusMesh;
-    std::unique_ptr<Mesh> m_PlaneMesh;
-
-    std::unique_ptr<Mesh> m_SkyboxMesh;
-
-    Texture m_DefaultTexture;
-    Texture m_DirectXTexture;
-    Texture m_EarthTexture;
-    Texture m_MonaLisaTexture;
-    Texture m_GraceCathedralTexture;
-    Texture m_GraceCathedralCubemap;
-
-    // HDR Render target
-    RenderTarget m_HDRRenderTarget;
-
-    // Root signatures
-    RootSignature m_SkyboxSignature;
-    RootSignature m_HDRRootSignature;
-    RootSignature m_SDRRootSignature;
-
-    // Pipeline state object.
-    // Skybox PSO
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SkyboxPipelineState;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_HDRPipelineState;
-    // HDR -> SDR tone mapping PSO.
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SDRPipelineState;
-
-    D3D12_RECT m_ScissorRect;
-
     Camera m_Camera;
     struct alignas( 16 ) CameraData
     {
@@ -165,7 +123,4 @@ private:
     // Scale the HDR render target to a fraction of the window size.
     float m_RenderScale;
 
-    // Define some lights.
-    std::vector<PointLight> m_PointLights;
-    std::vector<SpotLight> m_SpotLights;
 };

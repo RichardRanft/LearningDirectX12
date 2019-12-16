@@ -30,6 +30,9 @@
  *  @brief The application class is used to create windows for our application.
  */
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 #include <memory>
 #include <string>
 

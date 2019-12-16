@@ -37,5 +37,8 @@ target_include_directories( GameFramework
     PUBLIC inc
 )
 
+target_link_libraries( GameFramework 
+    PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/GameFramework.dir/${CMAKE_CFG_INTDIR}/GameFramework.res # This is the only way I could figure out how to link the compiled resource file.
+)
 
 

@@ -33,8 +33,9 @@ add_subdirectory( Tutorial1 )
 add_subdirectory( Tutorial2 )
 add_subdirectory( Tutorial3 )
 add_subdirectory( Tutorial4 )
+add_subdirectory( Tutorial5 )
 
 # Set the startup project.
 set_directory_properties( PROPERTIES 
-    VS_STARTUP_PROJECT Tutorial4
+    VS_STARTUP_PROJECT Tutorial5
 )
