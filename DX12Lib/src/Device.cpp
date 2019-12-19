@@ -5,8 +5,10 @@
 #include <CommandQueue.h>
 #include <DescriptorAllocator.h>
 
+std::atomic_uint64_t Device::ms_FrameCounter = 0ull;
+
 Device::Device()
-    : m_FrameCounter(0)
+    : m_NodeCount(0)
 {
     // Check for DirectX Math library support.
     if (!DirectX::XMVerifyCPUSupport())
@@ -37,23 +39,41 @@ Device::Device()
     if (dxgiAdapter)
     {
         m_d3d12Device = CreateDevice(dxgiAdapter);
+        if (m_d3d12Device)
+        {
+            m_NodeCount = m_d3d12Device->GetNodeCount();
+        }
+        else
+        {
+            throw std::exception("Failed to create D3D12 Device.");
+        }
     }
     else
     {
         throw std::exception("DXGI adapter enumeration failed.");
     }
+}
 
-    m_DirectCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    m_ComputeCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
-    m_CopyCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COPY);
-
-    m_TearingSupported = CheckTearingSupport();
-
-    // Create descriptor allocators
-    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+void Device::Init()
+{
+    for ( int nodeIndex = 0; nodeIndex < m_NodeCount; ++nodeIndex )
     {
-        m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+        m_DirectCommandQueue[nodeIndex] = std::make_shared<CommandQueue>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_DIRECT, nodeIndex);
+        m_ComputeCommandQueue[nodeIndex] = std::make_shared<CommandQueue>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COMPUTE, nodeIndex);
+        m_CopyCommandQueue[nodeIndex] = std::make_shared<CommandQueue>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COPY, nodeIndex);
+
+        // Create descriptor allocators
+        for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+        {
+            m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(shared_from_this(), static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+        }
     }
+}
+
+std::shared_ptr<Device> Device::CreateDevice()
+{
+    std::shared_ptr<Device> device = std::make_shared<Device>();
+    device->Init();
 }
 
 Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
@@ -145,33 +165,6 @@ Microsoft::WRL::ComPtr<ID3D12Device6> Device::CreateDevice(Microsoft::WRL::ComPt
     return d3d12Device6;
 }
 
-bool Device::CheckTearingSupport()
-{
-    BOOL allowTearing = FALSE;
-
-    // Rather than create the DXGI 1.5 factory interface directly, we create the
-    // DXGI 1.4 interface and query for the 1.5 interface. This is to enable the 
-    // graphics debugging tools which will not support the 1.5 factory interface 
-    // until a future update.
-    ComPtr<IDXGIFactory4> factory4;
-    if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory4))))
-    {
-        ComPtr<IDXGIFactory5> factory5;
-        if (SUCCEEDED(factory4.As(&factory5)))
-        {
-            factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING,
-                &allowTearing, sizeof(allowTearing));
-        }
-    }
-
-    return allowTearing == TRUE;
-}
-
-bool Device::IsTearingSupported() const
-{
-    return m_TearingSupported;
-}
-
 DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const
 {
     DXGI_SAMPLE_DESC sampleDesc = { 1, 0 };
@@ -200,19 +193,21 @@ Microsoft::WRL::ComPtr<ID3D12Device6> Device::GetD3D12Device() const
     return m_d3d12Device;
 }
 
-std::shared_ptr<CommandQueue> Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const
+std::shared_ptr<CommandQueue> Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type, uint32_t nodeIndex) const
 {
+    nodeIndex = nodeIndex % m_NodeCount;
+
     std::shared_ptr<CommandQueue> commandQueue;
     switch (type)
     {
     case D3D12_COMMAND_LIST_TYPE_DIRECT:
-        commandQueue = m_DirectCommandQueue;
+        commandQueue = m_DirectCommandQueue[nodeIndex];
         break;
     case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-        commandQueue = m_ComputeCommandQueue;
+        commandQueue = m_ComputeCommandQueue[nodeIndex];
         break;
     case D3D12_COMMAND_LIST_TYPE_COPY:
-        commandQueue = m_CopyCommandQueue;
+        commandQueue = m_CopyCommandQueue[nodeIndex];
         break;
     default:
         assert(false && "Invalid command queue type.");
@@ -223,9 +218,12 @@ std::shared_ptr<CommandQueue> Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE ty
 
 void Device::Flush()
 {
-    m_DirectCommandQueue->Flush();
-    m_ComputeCommandQueue->Flush();
-    m_CopyCommandQueue->Flush();
+    for( int i = 0; i < m_NodeCount; ++i )
+    {
+        m_DirectCommandQueue[i]->Flush();
+        m_ComputeCommandQueue[i]->Flush();
+        m_CopyCommandQueue[i]->Flush();
+    }
 }
 
 DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
@@ -241,13 +239,15 @@ void Device::ReleaseStaleDescriptors(uint64_t finishedFrame)
     }
 }
 
-Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Device::CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type)
+Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Device::CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t nodeIndex)
 {
+    nodeIndex = nodeIndex % m_NodeCount;
+    
     D3D12_DESCRIPTOR_HEAP_DESC desc = {};
     desc.Type = type;
     desc.NumDescriptors = numDescriptors;
     desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    desc.NodeMask = 0;
+    desc.NodeMask = AffinityIndexToNodeMask(nodeIndex);
 
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap;
     ThrowIfFailed(m_d3d12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));

@@ -68,7 +68,7 @@ public:
 protected:
     friend class Device;
 
-    CommandQueue(Device& device, D3D12_COMMAND_LIST_TYPE type);
+    CommandQueue(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type, uint32_t nodeIndex = 0);
 
 private:
     // Free any command lists that are finished processing on the command queue.
@@ -79,7 +79,7 @@ private:
     // a shared pointer to the "in-flight" command list.
     using CommandListEntry = std::tuple<uint64_t, std::shared_ptr<CommandList> >;
 
-    Device& m_Device;
+    std::shared_ptr<Device> m_Device;
 
     D3D12_COMMAND_LIST_TYPE                         m_CommandListType;
     Microsoft::WRL::ComPtr<ID3D12CommandQueue>      m_d3d12CommandQueue;

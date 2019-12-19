@@ -7,13 +7,13 @@
 #include <Device.h>
 #include <ResourceStateTracker.h>
 
-SwapChain::SwapChain(Device& device, HWND hWnd)
+SwapChain::SwapChain(std::shared_ptr<Device> device, HWND hWnd)
     : m_Device(device)
     , m_hWnd(hWnd)
+    , m_VSync(false)
+    , m_IsTearingSupported(false)
     , m_FrameCounter(0)
 {
-    m_IsTearingSupported = m_Device.IsTearingSupported();
-
     for (int i = 0; i < BufferCount; ++i)
     {
         m_BackBufferTextures[i].SetName(L"Backbuffer[" + std::to_wstring(i) + L"]");
@@ -31,13 +31,17 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> SwapChain::CreateSwapChain()
     ::GetClientRect(m_hWnd, &clientRect);
 
     ComPtr<IDXGISwapChain4> dxgiSwapChain4;
-    ComPtr<IDXGIFactory4> dxgiFactory4;
+    ComPtr<IDXGIFactory7> dxgiFactory;
     UINT createFactoryFlags = 0;
 #if defined(_DEBUG)
     createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
-    ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory4)));
+    ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
+
+    BOOL allowTearing = FALSE;
+    dxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = ( clientRect.right - clientRect.left );
@@ -53,10 +57,10 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> SwapChain::CreateSwapChain()
     // It is recommended to always allow tearing if tearing support is available.
     swapChainDesc.Flags = m_IsTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
-    ID3D12CommandQueue* pCommandQueue = m_Device.GetCommandQueue()->GetD3D12CommandQueue().Get();
+    ID3D12CommandQueue* pCommandQueue = m_Device->GetCommandQueue()->GetD3D12CommandQueue().Get();
 
     ComPtr<IDXGISwapChain1> swapChain1;
-    ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
+    ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
         pCommandQueue,
         m_hWnd,
         &swapChainDesc,
@@ -66,7 +70,7 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> SwapChain::CreateSwapChain()
 
     // Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
     // will be handled manually.
-    ThrowIfFailed(dxgiFactory4->MakeWindowAssociation(m_hWnd, DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(dxgiFactory->MakeWindowAssociation(m_hWnd, DXGI_MWA_NO_ALT_ENTER));
 
     ThrowIfFailed(swapChain1.As(&dxgiSwapChain4));
 

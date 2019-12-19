@@ -46,7 +46,7 @@ class RenderTarget;
 
 class SwapChain
 {
-public:    
+public:
     /**
      * Get the render target of the window. This method should be called every
      * frame since the color attachment point changes depending on the window's
@@ -66,6 +66,8 @@ public:
     UINT Present(const Texture& texture = Texture());
 
 protected:
+    SwapChain(std::shared_ptr<Device> device, HWND hWnd);
+
     // Create the swapchian.
     Microsoft::WRL::ComPtr<IDXGISwapChain4> CreateSwapChain();
 
@@ -73,14 +75,11 @@ protected:
     void UpdateRenderTargetViews();
 
 private:
-    friend class Device;
-
     // Number of swapchain back buffers.
     static const UINT BufferCount = 3;
 
-    SwapChain(Device& device, HWND hWnd);
 
-    Device& m_Device;
+    std::shared_ptr<Device> m_Device;
     HWND m_hWnd;
 
     bool m_VSync;
@@ -98,6 +97,4 @@ private:
     mutable RenderTarget m_RenderTarget;
 
     UINT m_CurrentBackBufferIndex;
-
-
 };

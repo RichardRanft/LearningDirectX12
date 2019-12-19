@@ -6,19 +6,19 @@
 #include <Device.h>
 #include <ResourceStateTracker.h>
 
-CommandQueue::CommandQueue(Device& _device, D3D12_COMMAND_LIST_TYPE type)
+CommandQueue::CommandQueue(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_TYPE type, uint32_t nodeIndex)
     : m_Device(_device)
     , m_FenceValue(0)
     , m_CommandListType(type)
     , m_bProcessInFlightCommandLists(true)
 {
-    auto device = m_Device.GetD3D12Device();
+    auto device = m_Device->GetD3D12Device();
 
     D3D12_COMMAND_QUEUE_DESC desc = {};
     desc.Type = type;
     desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
     desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    desc.NodeMask = 0;
+    desc.NodeMask = AffinityIndexToNodeMask(nodeIndex);
 
     ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_d3d12CommandQueue)));
     ThrowIfFailed(device->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3d12Fence)));
@@ -64,7 +64,6 @@ void CommandQueue::WaitForFenceValue(uint64_t fenceValue)
         auto event = ::CreateEvent( NULL, FALSE, FALSE, NULL );
         assert( event && "Failed to create fence event handle." );
 
-        // Is this function thread safe?
         m_d3d12Fence->SetEventOnCompletion(fenceValue, event );
         ::WaitForSingleObject( event, DWORD_MAX);
 

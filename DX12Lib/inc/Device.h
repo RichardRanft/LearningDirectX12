@@ -39,16 +39,22 @@
 class CommandQueue;
 class DescriptorAllocator;
 
-class Device
+class Device : public std::enable_shared_from_this<Device>
 {
 public:
-
-    Device();
+    /**
+     * Create the Graphics device object. This is used to create all device dependent resources.
+     */
+    static std::shared_ptr<Device> CreateDevice();
     
     /**
-     * Check to see if VSync-off is supported.
+     * Get the number of GPU nodes in the SLI configuration.
+     * @see https://docs.microsoft.com/en-us/windows/win32/direct3d12/multi-engine
      */
-    bool IsTearingSupported() const;
+    inline uint32_t GetNodeCount()
+    {
+        return m_NodeCount;
+    }
 
     /**
      * Check if the requested multisample quality is supported for the given format.
@@ -59,13 +65,14 @@ public:
      * Get the Direct3D 12 device
      */
     Microsoft::WRL::ComPtr<ID3D12Device6> GetD3D12Device() const;
+
     /**
      * Get a command queue. Valid types are:
      * - D3D12_COMMAND_LIST_TYPE_DIRECT : Can be used for draw, dispatch, or copy commands.
      * - D3D12_COMMAND_LIST_TYPE_COMPUTE: Can be used for dispatch or copy commands.
      * - D3D12_COMMAND_LIST_TYPE_COPY   : Can be used for copy commands.
      */
-    std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+    std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT, uint32_t nodeIndex = 0) const;
 
     /**
      * Flush all command queues.
@@ -82,49 +89,54 @@ public:
      */
     void ReleaseStaleDescriptors(uint64_t finishedFrame);
 
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type);
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
     /**
      * Increment the frame counter and return the previous frame count.
      */
-    uint64_t IncrementFrameCounter()
+    static uint64_t IncrementFrameCounter()
     {
-        return m_FrameCounter++;
+        return ms_FrameCounter++;
     }
 
     /**
      * Get the current frame counter value.
      */
-    uint64_t GetFrameCounter()
+    static uint64_t GetFrameCounter()
     {
-        return m_FrameCounter;
+        return ms_FrameCounter;
     }
 
     /**
      * Reset the frame counter to 0.
      */
-    void ResetFrameCounter()
+    static void ResetFrameCounter()
     {
-        m_FrameCounter = 0ull;
+        ms_FrameCounter = 0ull;
     }
 
 protected:
+    Device();
+
+    void Init();
 
     Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool bUseWarp);
     Microsoft::WRL::ComPtr<ID3D12Device6> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
-    bool CheckTearingSupport();
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t nodeIndex );
 
 private:
+    static const uint32_t MaxNodeCount = 2;
+
     Microsoft::WRL::ComPtr<ID3D12Device6> m_d3d12Device;
 
-    std::shared_ptr<CommandQueue> m_DirectCommandQueue;
-    std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
-    std::shared_ptr<CommandQueue> m_CopyCommandQueue;
+    std::shared_ptr<CommandQueue> m_DirectCommandQueue[MaxNodeCount];
+    std::shared_ptr<CommandQueue> m_ComputeCommandQueue[MaxNodeCount];
+    std::shared_ptr<CommandQueue> m_CopyCommandQueue[MaxNodeCount];
 
-    std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[MaxNodeCount][D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
-    uint64_t m_FrameCounter;
+    uint32_t m_NodeCount;
 
-    bool m_TearingSupported;
+    // The frame counter is used for safely releasing dynamic descriptors.
+    static std::atomic_uint64_t ms_FrameCounter;
 };

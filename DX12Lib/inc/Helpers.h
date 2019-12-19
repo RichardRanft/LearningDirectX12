@@ -51,6 +51,12 @@ inline void ThrowIfFailed(HRESULT hr)
     }
 }
 
+// GPU Affinity index to node mask
+uint32_t AffinityIndexToNodeMask(uint32_t index)
+{
+    return (1 << index);
+}
+
 // Hashers for view descriptions.
 namespace std
 {

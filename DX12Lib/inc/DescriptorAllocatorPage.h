@@ -84,9 +84,9 @@ public:
     void ReleaseStaleDescriptors( uint64_t frameNumber );
 
 protected:
-    friend class DynamicDescriptorHeap;
+    friend class DescriptorAllocator;
 
-    DescriptorAllocatorPage(Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+    DescriptorAllocatorPage(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors, uint32_t nodeIndex);
 
     // Compute the offset of the descriptor handle from the start of the heap.
     uint32_t ComputeOffset( D3D12_CPU_DESCRIPTOR_HANDLE handle );
@@ -147,12 +147,15 @@ private:
     FreeListBySize m_FreeListBySize;
     StaleDescriptorQueue m_StaleDescriptors;
 
+    std::shared_ptr<Device> m_Device;
+
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_d3d12DescriptorHeap;
     D3D12_DESCRIPTOR_HEAP_TYPE m_HeapType;
     CD3DX12_CPU_DESCRIPTOR_HANDLE m_BaseDescriptor;
     uint32_t m_DescriptorHandleIncrementSize;
     uint32_t m_NumDescriptorsInHeap;
     uint32_t m_NumFreeHandles;
+    uint32_t m_NodeIndex;
 
     std::mutex m_AllocationMutex;
 };

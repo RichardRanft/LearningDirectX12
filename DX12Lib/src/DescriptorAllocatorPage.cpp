@@ -3,15 +3,20 @@
 #include <DescriptorAllocatorPage.h>
 #include <Device.h>
 
-DescriptorAllocatorPage::DescriptorAllocatorPage(Device& device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors )
-    : m_HeapType( type )
+DescriptorAllocatorPage::DescriptorAllocatorPage(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors, uint32_t nodeIndex )
+    : m_Device(device)
+    , m_HeapType( type )
     , m_NumDescriptorsInHeap( numDescriptors )
 {
-    auto d3d12Device = device.GetD3D12Device();
+    auto d3d12Device = m_Device->GetD3D12Device();
+
+    m_NodeIndex = nodeIndex % m_Device->GetNodeCount();
 
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
     heapDesc.Type = m_HeapType;
     heapDesc.NumDescriptors = m_NumDescriptorsInHeap;
+    heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    heapDesc.NodeMask = AffinityIndexToNodeMask(m_NodeIndex);
 
     ThrowIfFailed(d3d12Device->CreateDescriptorHeap( &heapDesc, IID_PPV_ARGS( &m_d3d12DescriptorHeap ) ) );
 

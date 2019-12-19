@@ -48,11 +48,11 @@
 #include <vector>
 
 class DescriptorAllocatorPage;
+class Device;
 
 class DescriptorAllocator
 {
 public:
-    DescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256);
     virtual ~DescriptorAllocator();
 
     /**
@@ -68,14 +68,20 @@ public:
      */
     void ReleaseStaleDescriptors( uint64_t frameNumber );
 
+protected:
+    DescriptorAllocator(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256, uint32_t nodeIndex = 0);
+
 private:
     using DescriptorHeapPool = std::vector< std::shared_ptr<DescriptorAllocatorPage> >;
 
     // Create a new heap with a specific number of descriptors.
     std::shared_ptr<DescriptorAllocatorPage> CreateAllocatorPage();
 
+    std::shared_ptr<Device> m_Device;
+
     D3D12_DESCRIPTOR_HEAP_TYPE m_HeapType;
     uint32_t m_NumDescriptorsPerHeap;
+    uint32_t m_NodeIndex;
 
     DescriptorHeapPool m_HeapPool;
     // Indices of available heaps in the heap pool.
