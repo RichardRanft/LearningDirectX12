@@ -7,8 +7,9 @@
 
 std::atomic_uint64_t Device::ms_FrameCounter = 0ull;
 
-Device::Device()
+Device::Device(uint32_t nodeMask)
     : m_NodeCount(0)
+    , m_NodeMask(nodeMask)
 {
     // Check for DirectX Math library support.
     if (!DirectX::XMVerifyCPUSupport())
@@ -41,7 +42,7 @@ Device::Device()
         m_d3d12Device = CreateDevice(dxgiAdapter);
         if (m_d3d12Device)
         {
-            m_NodeCount = m_d3d12Device->GetNodeCount();
+            m_NodeCount = std::min(m_d3d12Device->GetNodeCount(), MaxNodeCount);
         }
         else
         {
@@ -65,14 +66,14 @@ void Device::Init()
         // Create descriptor allocators
         for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
         {
-            m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(shared_from_this(), static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+            m_DescriptorAllocators[nodeIndex][i] = std::make_unique<DescriptorAllocator>(shared_from_this(), static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
         }
     }
 }
 
-std::shared_ptr<Device> Device::CreateDevice()
+std::shared_ptr<Device> Device::CreateDevice(uint32_t nodeMask)
 {
-    std::shared_ptr<Device> device = std::make_shared<Device>();
+    std::shared_ptr<Device> device = std::make_shared<Device>(nodeMask);
     device->Init();
 }
 

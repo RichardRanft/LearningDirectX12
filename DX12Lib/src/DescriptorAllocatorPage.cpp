@@ -16,7 +16,7 @@ DescriptorAllocatorPage::DescriptorAllocatorPage(std::shared_ptr<Device> device,
     heapDesc.Type = m_HeapType;
     heapDesc.NumDescriptors = m_NumDescriptorsInHeap;
     heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    heapDesc.NodeMask = AffinityIndexToNodeMask(m_NodeIndex);
+    heapDesc.NodeMask = m_Device->GetNodeMask(nodeIndex);
 
     ThrowIfFailed(d3d12Device->CreateDescriptorHeap( &heapDesc, IID_PPV_ARGS( &m_d3d12DescriptorHeap ) ) );
 

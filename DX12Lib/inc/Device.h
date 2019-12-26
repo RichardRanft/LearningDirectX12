@@ -43,9 +43,14 @@ class Device : public std::enable_shared_from_this<Device>
 {
 public:
     /**
-     * Create the Graphics device object. This is used to create all device dependent resources.
+     * Create the Graphics device object.
+     * The returned device is used to create all device-dependent resources.
+     * 
+     * @param nodeMask Specify which nodes to use in CrossFire or SLI Multi-GPU configurations.
+     * The parameter is a bit pattern which represents the nodes to use. By default, all nodes
+     * are active.
      */
-    static std::shared_ptr<Device> CreateDevice();
+    static std::shared_ptr<Device> CreateDevice(uint32_t nodeMask = UINT_MAX);
     
     /**
      * Get the number of GPU nodes in the SLI configuration.
@@ -54,6 +59,23 @@ public:
     inline uint32_t GetNodeCount()
     {
         return m_NodeCount;
+    }
+
+    /**
+     * Get the node mask for the given node index.
+     */
+    inline uint32_t GetNodeMask(uint32_t nodeIndex) const
+    {
+        nodeIndex = nodeIndex % m_NodeCount;
+        return ( 1 << nodeIndex ) & m_NodeMask;
+    }
+
+    /**
+     * Get the node mask for all active GPU nodes.
+     */
+    inline uint32_t GetAllNodeMask() const
+    {
+        return ( ( 1 << m_NodeCount ) - 1 ) & m_NodeMask;
     }
 
     /**
@@ -116,7 +138,7 @@ public:
     }
 
 protected:
-    Device();
+    explicit Device(uint32_t nodeMask) noexcept;
 
     void Init();
 
@@ -136,6 +158,7 @@ private:
     std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[MaxNodeCount][D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
     uint32_t m_NodeCount;
+    uint32_t m_NodeMask;
 
     // The frame counter is used for safely releasing dynamic descriptors.
     static std::atomic_uint64_t ms_FrameCounter;

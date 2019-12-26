@@ -45,11 +45,14 @@ class Device;
 class RootSignature
 {
 public:
-    RootSignature();
+    RootSignature() noexcept;
     RootSignature(RootSignature&& other) noexcept;
+    RootSignature(const RootSignature& copy);
+
     virtual ~RootSignature();
 
     RootSignature& operator=(RootSignature&& other) noexcept;
+    RootSignature& operator=(const RootSignature& other);
 
     void Destroy();
 
@@ -67,22 +70,24 @@ public:
     uint32_t GetNumDescriptors(uint32_t rootIndex) const;
 
 protected:
-    // TODO: Add (deep) copy/move constructors and assignment operators!
-    RootSignature(std::shared_ptr<Device> device);
     RootSignature(
         std::shared_ptr<Device> device,
         const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion,
+        uint32_t nodeMask
     );
 
     void SetRootSignatureDesc(
         const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion,
+        uint32_t nodeMask
     );
 
 private:
     std::shared_ptr<Device> m_Device;
     D3D12_ROOT_SIGNATURE_DESC1 m_RootSignatureDesc;
+    D3D_ROOT_SIGNATURE_VERSION m_RootSignatureVersion;
+    uint32_t m_NodeMask;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 
     // Need to know the number of descriptors per descriptor table.
