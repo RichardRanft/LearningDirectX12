@@ -9,9 +9,10 @@
 
 #include <d3dx12.h>
 
-GenerateMipsPSO::GenerateMipsPSO(Device& device)
+GenerateMipsPSO::GenerateMipsPSO(std::shared_ptr<Device> device)
+    : m_Device(device)
 {
-    auto d3d12Device = device.GetD3D12Device();
+    auto d3d12Device = device->GetD3D12Device();
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;

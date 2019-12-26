@@ -45,7 +45,11 @@ class Device;
 class RootSignature
 {
 public:
+    RootSignature();
+    RootSignature(RootSignature&& other) noexcept;
     virtual ~RootSignature();
+
+    RootSignature& operator=(RootSignature&& other) noexcept;
 
     void Destroy();
 
@@ -53,11 +57,6 @@ public:
     {
         return m_RootSignature;
     }
-
-    void SetRootSignatureDesc(
-        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
-    );
 
     const D3D12_ROOT_SIGNATURE_DESC1& GetRootSignatureDesc() const
     {
@@ -69,15 +68,20 @@ public:
 
 protected:
     // TODO: Add (deep) copy/move constructors and assignment operators!
-    RootSignature(Device& device);
+    RootSignature(std::shared_ptr<Device> device);
     RootSignature(
-        Device& device,
+        std::shared_ptr<Device> device,
+        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
+    );
+
+    void SetRootSignatureDesc(
         const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
     );
 
 private:
-    Device& m_Device;
+    std::shared_ptr<Device> m_Device;
     D3D12_ROOT_SIGNATURE_DESC1 m_RootSignatureDesc;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
 

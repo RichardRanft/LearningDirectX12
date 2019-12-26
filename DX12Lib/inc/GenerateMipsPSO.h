@@ -37,8 +37,6 @@
 #include <DirectXMath.h>
 #include <wrl.h>
 
-class Device;
-
 struct alignas( 16 ) GenerateMipsCB
 {
     uint32_t SrcMipLevel;           // Texture level of source mip
@@ -80,10 +78,11 @@ public:
     }
 
 protected:
-    GenerateMipsPSO(Device& device);
+    GenerateMipsPSO(std::shared_ptr<Device> device);
 
 private:
     RootSignature m_RootSignature;
+    std::shared_ptr<Device> m_Device;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
     // Default (no resource) UAV's to pad the unused UAV descriptors.
     // If generating less than 4 mip map levels, the unused mip maps
