@@ -17,8 +17,20 @@
 #include <string>
 #include <comdef.h>
 
+#if defined(_UNICODE)
+inline std::string ConvertString(const TCHAR* s)
+{
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(s);
+}
+#else
+inline std::string ConvertString(const TCHAR* s)
+{
+    return s;
+}
+#endif
+
 void WriteHRESULTError(HRESULT const hr)
 {
     _com_error err(hr, nullptr);
-    DebugLog(L"HRESULT Failure: %d 0x%08X %s\n", hr, hr, std::wstring_convert<std::codecvt_utf8<TCHAR>>().to_bytes(err.ErrorMessage()).c_str());
+    DebugLog(L"HRESULT Failure: %d 0x%08X %s\n", hr, hr, ConvertString(err.ErrorMessage()).c_str());
 }
