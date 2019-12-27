@@ -31,7 +31,6 @@ set( HEADER_FILES
     inc/ThreadSafeQueue.h
     inc/UploadBuffer.h
     inc/VertexBuffer.h
-    inc/d3dx12.h
 )
 
 set( SOURCE_FILES
@@ -106,7 +105,7 @@ add_library( DX12Lib STATIC
 
 # Enable C++17 compiler features.
 target_compile_features( DX12Lib 
-	PUBLIC cxx_std_17
+    PUBLIC cxx_std_17
 )
 
 target_include_directories( DX12Lib
@@ -115,7 +114,8 @@ target_include_directories( DX12Lib
 )
 
 target_link_libraries( DX12Lib 
-	PUBLIC DirectXTex
+    PUBLIC DirectXTex
+    PUBLIC D3DX12AffinityLayer
     PUBLIC assimp
     PUBLIC d3d12.lib
     PUBLIC dxgi.lib
