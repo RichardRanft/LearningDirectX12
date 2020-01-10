@@ -22,11 +22,11 @@
 std::map<std::wstring, ID3D12Resource* > CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
 
-CommandList::CommandList(Device& _device, D3D12_COMMAND_LIST_TYPE type)
+CommandList::CommandList(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_TYPE type)
     : m_Device(_device)
     , m_d3d12CommandListType( type )
 {
-    auto device = m_Device.GetD3D12Device();
+    auto device = m_Device->GetD3D12Device();
 
     ThrowIfFailed(device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
 
@@ -106,7 +106,7 @@ void CommandList::FlushResourceBarriers()
     m_ResourceStateTracker->FlushResourceBarriers( *this );
 }
 
-void CommandList::CopyResource(Microsoft::WRL::ComPtr<ID3D12Resource> dstRes, Microsoft::WRL::ComPtr<ID3D12Resource> srcRes)
+void CommandList::CopyResource(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> dstRes, Microsoft::WRL::ComPtr<CD3DX12AffinityResource> srcRes)
 {
     TransitionBarrier(dstRes, D3D12_RESOURCE_STATE_COPY_DEST);
     TransitionBarrier(srcRes, D3D12_RESOURCE_STATE_COPY_SOURCE);

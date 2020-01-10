@@ -75,7 +75,7 @@ public:
     /**
      * Get direct access to the ID3D12GraphicsCommandList2 interface.
      */
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> GetGraphicsCommandList() const
+    Microsoft::WRL::ComPtr<CD3DX12AffinityGraphicsCommandList> GetGraphicsCommandList() const
     {
         return m_d3d12CommandList;
     }
@@ -89,7 +89,7 @@ public:
      * @param flushBarriers Force flush any barriers. Resource barriers need to be flushed before a command (draw, dispatch, or copy) that expects the resource to be in a particular state can run.
      */
     void TransitionBarrier( const Resource& resource, D3D12_RESOURCE_STATES stateAfter, UINT subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false );
-    void TransitionBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES stateAfter, UINT subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
+    void TransitionBarrier(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource, D3D12_RESOURCE_STATES stateAfter, UINT subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, bool flushBarriers = false);
 
     /**
      * Add a UAV barrier to ensure that any writes to a resource have completed
@@ -101,7 +101,7 @@ public:
      * to be in a particular state can run.
      */
     void UAVBarrier( const Resource& resource, bool flushBarriers = false );
-    void UAVBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, bool flushBarriers = false);
+    void UAVBarrier(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource, bool flushBarriers = false);
 
     /**
      * Add an aliasing barrier to indicate a transition between usages of two 
@@ -111,7 +111,7 @@ public:
      * @param afterResource The resource that will occupy the space in the heap.
      */
     void AliasingBarrier( const Resource& beforeResource, const Resource& afterResource, bool flushBarriers = false );
-    void AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> beforeResource, Microsoft::WRL::ComPtr<ID3D12Resource> afterResource, bool flushBarriers = false);
+    void AliasingBarrier(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> beforeResource, Microsoft::WRL::ComPtr<CD3DX12AffinityResource> afterResource, bool flushBarriers = false);
 
     /**
      * Flush any barriers that have been pushed to the command list.
@@ -122,7 +122,7 @@ public:
 	 * Copy resources.
 	 */
 	void CopyResource(Resource& dstRes, const Resource& srcRes);
-    void CopyResource(Microsoft::WRL::ComPtr<ID3D12Resource> dstRes, Microsoft::WRL::ComPtr<ID3D12Resource> srcRes);
+    void CopyResource(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> dstRes, Microsoft::WRL::ComPtr<CD3DX12AffinityResource> srcRes);
 
     /**
      * Resolve a multisampled resource into a non-multisampled resource.
@@ -398,8 +398,7 @@ public:
     }
 
 protected:
-
-    CommandList(Device& device, D3D12_COMMAND_LIST_TYPE type);
+    CommandList(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type);
 
 private:
     void TrackResource(Microsoft::WRL::ComPtr<ID3D12Object> object);
@@ -416,11 +415,11 @@ private:
 
     using TrackedObjects = std::vector < Microsoft::WRL::ComPtr<ID3D12Object> >;
 
-    Device& m_Device;
+    std::shared_ptr<Device> m_Device;
 
     D3D12_COMMAND_LIST_TYPE m_d3d12CommandListType;
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> m_d3d12CommandList;
-    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_d3d12CommandAllocator;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityGraphicsCommandList> m_d3d12CommandList;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityCommandAllocator> m_d3d12CommandAllocator;
 
     // For copy queues, it may be necessary to generate mips while loading textures.
     // Mips can't be generated on copy queues but must be generated on compute or

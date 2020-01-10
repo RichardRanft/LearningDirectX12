@@ -7,6 +7,31 @@
 
 std::atomic_uint64_t Device::ms_FrameCounter = 0ull;
 
+// Allow std::make_shared access to constructor.
+struct DeviceCtor : public Device {
+    DeviceCtor(uint32_t nodeMask)
+        : Device(nodeMask)
+    {}
+};
+
+// Allow std::make_shared access to constructor.
+struct DescriptorAllocatorCtor : public DescriptorAllocator
+{
+    DescriptorAllocatorCtor(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256)
+        : DescriptorAllocator(device, type, numDescriptorsPerHeap)
+    {}
+};
+
+// Allow std::make_shared access to constructor.
+struct CommandQueueCtor : public CommandQueue
+{
+    CommandQueueCtor(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type)
+        : CommandQueue(device, type)
+    {}
+};
+
+
+
 Device::Device(uint32_t nodeMask)
     : m_NodeCount(0)
     , m_NodeMask(nodeMask)
@@ -57,24 +82,23 @@ Device::Device(uint32_t nodeMask)
 
 void Device::Init()
 {
-    for ( int nodeIndex = 0; nodeIndex < m_NodeCount; ++nodeIndex )
-    {
-        m_DirectCommandQueue[nodeIndex] = std::make_shared<CommandQueue>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_DIRECT, nodeIndex);
-        m_ComputeCommandQueue[nodeIndex] = std::make_shared<CommandQueue>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COMPUTE, nodeIndex);
-        m_CopyCommandQueue[nodeIndex] = std::make_shared<CommandQueue>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COPY, nodeIndex);
+    m_DirectCommandQueue = std::make_shared<CommandQueueCtor>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+    m_ComputeCommandQueue = std::make_shared<CommandQueueCtor>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
+    m_CopyCommandQueue = std::make_shared<CommandQueueCtor>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COPY);
 
-        // Create descriptor allocators
-        for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
-        {
-            m_DescriptorAllocators[nodeIndex][i] = std::make_unique<DescriptorAllocator>(shared_from_this(), static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
-        }
+    // Create descriptor allocators
+    for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+    {
+        m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocatorCtor>(shared_from_this(), static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
     }
 }
 
 std::shared_ptr<Device> Device::CreateDevice(uint32_t nodeMask)
 {
-    std::shared_ptr<Device> device = std::make_shared<Device>(nodeMask);
+    std::shared_ptr<Device> device = std::make_shared<DeviceCtor>(nodeMask);
     device->Init();
+
+    return device;
 }
 
 Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
@@ -119,16 +143,18 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
 
     return dxgiAdapter4;
 }
-Microsoft::WRL::ComPtr<ID3D12Device6> Device::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
+Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
 {
     ComPtr<ID3D12Device6> d3d12Device6;
+    ComPtr<CD3DX12AffinityDevice> affinityDevice;
     ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device6)));
+    ThrowIfFailed(D3DX12AffinityCreateLDADevice(d3d12Device6.Get(), &affinityDevice));
     //    NAME_D3D12_OBJECT(d3d12Device2);
 
         // Enable debug messages in debug mode.
 #if defined(_DEBUG)
     ComPtr<ID3D12InfoQueue> pInfoQueue;
-    if (SUCCEEDED(d3d12Device6.As(&pInfoQueue)))
+    if (SUCCEEDED(affinityDevice.As(&pInfoQueue)))
     {
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -163,7 +189,7 @@ Microsoft::WRL::ComPtr<ID3D12Device6> Device::CreateDevice(Microsoft::WRL::ComPt
     }
 #endif
 
-    return d3d12Device6;
+    return affinityDevice;
 }
 
 DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const
@@ -189,26 +215,24 @@ DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT nu
     return sampleDesc;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device6> Device::GetD3D12Device() const
+Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::GetD3D12Device() const
 {
     return m_d3d12Device;
 }
 
-std::shared_ptr<CommandQueue> Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type, uint32_t nodeIndex) const
+std::shared_ptr<CommandQueue> Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const
 {
-    nodeIndex = nodeIndex % m_NodeCount;
-
     std::shared_ptr<CommandQueue> commandQueue;
     switch (type)
     {
     case D3D12_COMMAND_LIST_TYPE_DIRECT:
-        commandQueue = m_DirectCommandQueue[nodeIndex];
+        commandQueue = m_DirectCommandQueue;
         break;
     case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-        commandQueue = m_ComputeCommandQueue[nodeIndex];
+        commandQueue = m_ComputeCommandQueue;
         break;
     case D3D12_COMMAND_LIST_TYPE_COPY:
-        commandQueue = m_CopyCommandQueue[nodeIndex];
+        commandQueue = m_CopyCommandQueue;
         break;
     default:
         assert(false && "Invalid command queue type.");
@@ -219,12 +243,9 @@ std::shared_ptr<CommandQueue> Device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE ty
 
 void Device::Flush()
 {
-    for( int i = 0; i < m_NodeCount; ++i )
-    {
-        m_DirectCommandQueue[i]->Flush();
-        m_ComputeCommandQueue[i]->Flush();
-        m_CopyCommandQueue[i]->Flush();
-    }
+    m_CopyCommandQueue->Flush();
+    m_ComputeCommandQueue->Flush();
+    m_DirectCommandQueue->Flush();
 }
 
 DescriptorAllocation Device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
@@ -238,22 +259,6 @@ void Device::ReleaseStaleDescriptors(uint64_t finishedFrame)
     {
         m_DescriptorAllocators[i]->ReleaseStaleDescriptors(finishedFrame);
     }
-}
-
-Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Device::CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t nodeIndex)
-{
-    nodeIndex = nodeIndex % m_NodeCount;
-    
-    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-    desc.Type = type;
-    desc.NumDescriptors = numDescriptors;
-    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    desc.NodeMask = AffinityIndexToNodeMask(nodeIndex);
-
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-    ThrowIfFailed(m_d3d12Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
-
-    return descriptorHeap;
 }
 
 UINT Device::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const

@@ -31,7 +31,7 @@
  */
 
 
-#include <d3d12.h>              // For ID3D12CommandQueue, ID3D12Device2, and ID3D12Fence
+#include <d3dx12affinity.h>     // For CD3DX12AffinityCommandQueue, CD3DX12AffinityDevice, and CD3DX12AffinityFence
 #include <wrl.h>                // For Microsoft::WRL::ComPtr
 
 #include <atomic>               // For std::atomic_bool
@@ -41,6 +41,7 @@
 #include "ThreadSafeQueue.h"
 
 class CommandList;
+class Device;
 
 class CommandQueue
 {
@@ -63,12 +64,10 @@ public:
     // Wait for another command queue to finish.
     void Wait( const CommandQueue& other );
 
-    Microsoft::WRL::ComPtr<ID3D12CommandQueue> GetD3D12CommandQueue() const;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityCommandQueue> GetD3D12CommandQueue() const;
 
 protected:
-    friend class Device;
-
-    CommandQueue(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type, uint32_t nodeIndex = 0);
+    CommandQueue(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type);
 
 private:
     // Free any command lists that are finished processing on the command queue.
@@ -81,13 +80,13 @@ private:
 
     std::shared_ptr<Device> m_Device;
 
-    D3D12_COMMAND_LIST_TYPE                         m_CommandListType;
-    Microsoft::WRL::ComPtr<ID3D12CommandQueue>      m_d3d12CommandQueue;
-    Microsoft::WRL::ComPtr<ID3D12Fence>             m_d3d12Fence;
-    std::atomic_uint64_t                            m_FenceValue;
+    D3D12_COMMAND_LIST_TYPE                             m_CommandListType;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityCommandQueue> m_d3d12CommandQueue;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityFence>        m_d3d12Fence;
+    std::atomic_uint64_t                                m_FenceValue;
 
-    ThreadSafeQueue<CommandListEntry>               m_InFlightCommandLists;
-    ThreadSafeQueue<std::shared_ptr<CommandList> >  m_AvailableCommandLists;
+    ThreadSafeQueue<CommandListEntry>                   m_InFlightCommandLists;
+    ThreadSafeQueue<std::shared_ptr<CommandList> >      m_AvailableCommandLists;
 
     // A thread to process in-flight command lists.
     std::thread m_ProcessInFlightCommandListsThread;

@@ -6,7 +6,7 @@
 #include <Device.h>
 #include <ResourceStateTracker.h>
 
-CommandQueue::CommandQueue(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_TYPE type, uint32_t nodeIndex)
+CommandQueue::CommandQueue(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_TYPE type)
     : m_Device(_device)
     , m_FenceValue(0)
     , m_CommandListType(type)
@@ -18,7 +18,6 @@ CommandQueue::CommandQueue(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_T
     desc.Type = type;
     desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
     desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    desc.NodeMask = AffinityIndexToNodeMask(nodeIndex);
 
     ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_d3d12CommandQueue)));
     ThrowIfFailed(device->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3d12Fence)));
@@ -26,13 +25,13 @@ CommandQueue::CommandQueue(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_T
     switch ( type )
     {
         case D3D12_COMMAND_LIST_TYPE_COPY:
-            m_d3d12CommandQueue->SetName( L"Copy Command Queue" );
+            m_d3d12CommandQueue->SetName( L"Copy Queue" );
             break;
         case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-            m_d3d12CommandQueue->SetName( L"Compute Command Queue" );
+            m_d3d12CommandQueue->SetName( L"Compute Queue" );
             break;
         case D3D12_COMMAND_LIST_TYPE_DIRECT:
-            m_d3d12CommandQueue->SetName( L"Direct Command Queue" );
+            m_d3d12CommandQueue->SetName( L"Direct Queue" );
             break;
     }
 

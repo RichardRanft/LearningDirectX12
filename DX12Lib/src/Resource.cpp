@@ -5,21 +5,23 @@
 #include <Device.h>
 #include <ResourceStateTracker.h>
 
-Resource::Resource(Device& device, const std::wstring& name)
-    : m_d3d12Device(device.GetD3D12Device())
+Resource::Resource(std::shared_ptr<Device> device, const std::wstring& name)
+    : m_Device(device)
     , m_ResourceName(name)
     , m_FormatSupport({})
 {}
 
-Resource::Resource(Device& device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue, const std::wstring& name)
-    : m_d3d12Device(device.GetD3D12Device())
+Resource::Resource(std::shared_ptr<Device> device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue, const std::wstring& name)
+    : m_Device(device)
 {
     if ( clearValue )
     {
         m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*clearValue);
     }
     
-    ThrowIfFailed( m_d3d12Device->CreateCommittedResource(
+    auto d3d12device = m_Device->GetD3D12Device();
+
+    ThrowIfFailed(d3d12device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
         D3D12_HEAP_FLAG_NONE,
         &resourceDesc,

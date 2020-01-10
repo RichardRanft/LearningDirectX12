@@ -44,7 +44,7 @@
  *  @see https://msdn.microsoft.com/en-us/library/dn899226(v=vs.85).aspx#implicit_state_transitions
  */
 
-#include <d3d12.h>
+#include <d3dx12affinity.h>
 
 #include <mutex>
 #include <map>
@@ -75,7 +75,7 @@ public:
      * @param subResource The subresource to transition. By default, this is D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES
      * which indicates that all subresources should be transitioned to the same state.
      */
-    void TransitionResource( ID3D12Resource* resource, D3D12_RESOURCE_STATES stateAfter, UINT subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES );
+    void TransitionResource(CD3DX12AffinityResource* resource, D3D12_RESOURCE_STATES stateAfter, UINT subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
     void TransitionResource(const Resource& resource, D3D12_RESOURCE_STATES stateAfter, UINT subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
     /**

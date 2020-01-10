@@ -32,7 +32,7 @@
 
 #include <DescriptorAllocation.h>
 #include <memory>
-#include <d3dx12.h>
+#include <d3dx12affinity_d3dx12.h>
 #include <dxgi1_6.h>
 #include <wrl.h>
 
@@ -64,7 +64,7 @@ public:
     /**
      * Get the node mask for the given node index.
      */
-    inline uint32_t GetNodeMask(uint32_t nodeIndex) const
+    inline uint32_t GetNodeMask(uint32_t nodeIndex = 0) const
     {
         nodeIndex = nodeIndex % m_NodeCount;
         return ( 1 << nodeIndex ) & m_NodeMask;
@@ -86,7 +86,7 @@ public:
     /**
      * Get the Direct3D 12 device
      */
-    Microsoft::WRL::ComPtr<ID3D12Device6> GetD3D12Device() const;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> GetD3D12Device() const;
 
     /**
      * Get a command queue. Valid types are:
@@ -94,7 +94,7 @@ public:
      * - D3D12_COMMAND_LIST_TYPE_COMPUTE: Can be used for dispatch or copy commands.
      * - D3D12_COMMAND_LIST_TYPE_COPY   : Can be used for copy commands.
      */
-    std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT, uint32_t nodeIndex = 0) const;
+    std::shared_ptr<CommandQueue> GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
     /**
      * Flush all command queues.
@@ -138,24 +138,23 @@ public:
     }
 
 protected:
-    explicit Device(uint32_t nodeMask) noexcept;
+    explicit Device(uint32_t nodeMask);
 
     void Init();
 
     Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool bUseWarp);
-    Microsoft::WRL::ComPtr<ID3D12Device6> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t nodeIndex );
+    Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
 
 private:
     static const uint32_t MaxNodeCount = 2;
 
-    Microsoft::WRL::ComPtr<ID3D12Device6> m_d3d12Device;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> m_d3d12Device;
 
-    std::shared_ptr<CommandQueue> m_DirectCommandQueue[MaxNodeCount];
-    std::shared_ptr<CommandQueue> m_ComputeCommandQueue[MaxNodeCount];
-    std::shared_ptr<CommandQueue> m_CopyCommandQueue[MaxNodeCount];
+    std::shared_ptr<CommandQueue> m_DirectCommandQueue;
+    std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
+    std::shared_ptr<CommandQueue> m_CopyCommandQueue;
 
-    std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[MaxNodeCount][D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
     uint32_t m_NodeCount;
     uint32_t m_NodeMask;

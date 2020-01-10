@@ -3,11 +3,10 @@
 #include <DescriptorAllocator.h>
 #include <DescriptorAllocatorPage.h>
 
-DescriptorAllocator::DescriptorAllocator(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap, uint32_t nodeIndex)
+DescriptorAllocator::DescriptorAllocator(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap)
     : m_Device(device)
     , m_HeapType(type)
     , m_NumDescriptorsPerHeap(numDescriptorsPerHeap)
-    , m_NodeIndex(nodeIndex)
 {}
 
 DescriptorAllocator::~DescriptorAllocator()
