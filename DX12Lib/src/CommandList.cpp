@@ -43,18 +43,25 @@ struct PanoToCubemapPSOCtor : public PanoToCubemapPSO
     {}
 };
 
-CommandList::CommandList(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_TYPE type)
-    : m_Device(_device)
+struct UploadBufferCtor : public UploadBuffer
+{
+    UploadBufferCtor(std::shared_ptr<Device> device, size_t pageSize = _2MB)
+    : UploadBuffer(device, pageSize)
+    {}
+};
+
+CommandList::CommandList(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type)
+    : m_Device(device)
     , m_d3d12CommandListType( type )
 {
-    auto device = m_Device->GetD3D12Device();
+    auto d3d12Device = m_Device->GetD3D12Device();
 
-    ThrowIfFailed(device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
+    ThrowIfFailed(d3d12Device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
 
-    ThrowIfFailed(device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(),
+    ThrowIfFailed(d3d12Device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(),
                                               nullptr, IID_PPV_ARGS( &m_d3d12CommandList ) ) );
 
-    m_UploadBuffer = std::make_unique<UploadBuffer>();
+    m_UploadBuffer = std::make_unique<UploadBufferCtor>(m_Device);
 
     m_ResourceStateTracker = std::make_unique<ResourceStateTracker>();
 
@@ -212,7 +219,7 @@ void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t element
         TrackResource(d3d12Resource);
     }
 
-    buffer.SetD3D12Resource( d3d12Resource );
+    buffer.SetD3D12Resource( m_Device, d3d12Resource );
     buffer.CreateViews( numElements, elementSize );
 }
 
@@ -255,7 +262,7 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
     if ( iter != ms_TextureCache.end() )
     {
         texture.SetTextureUsage(textureUsage);
-        texture.SetD3D12Resource(iter->second);
+        texture.SetD3D12Resource(m_Device, iter->second);
         texture.CreateViews();
         texture.SetName(fileName);
     }
@@ -342,7 +349,7 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
             IID_PPV_ARGS(&textureResource)));
 
         texture.SetTextureUsage(textureUsage);
-        texture.SetD3D12Resource(textureResource);
+        texture.SetD3D12Resource(m_Device, textureResource);
         texture.CreateViews();
         texture.SetName(fileName);
 
@@ -496,8 +503,9 @@ void CommandList::GenerateMips( Texture& texture )
         AliasingBarrier(aliasResource, uavResource);
     }
 
+    Texture uavTexture = m_Device->CreateTexture(uavResource, texture.GetTextureUsage());
     // Generate mips with the UAV compatible resource.
-    GenerateMips_UAV(Texture(uavResource, texture.GetTextureUsage()), Texture::IsSRGBFormat(resourceDesc.Format) );
+    GenerateMips_UAV(uavTexture, Texture::IsSRGBFormat(resourceDesc.Format) );
 
     if (aliasResource)
     {
@@ -622,7 +630,8 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
     CD3DX12_RESOURCE_DESC cubemapDesc(cubemapResource->GetDesc());
 
     auto stagingResource = cubemapResource;
-    Texture stagingTexture(stagingResource);
+    Texture stagingTexture = m_Device->CreateTexture(stagingResource);
+
     // If the passed-in resource does not allow for UAV access
     // then create a staging resource that is used to generate
     // the cubemap.
@@ -644,7 +653,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
 
         ResourceStateTracker::AddGlobalResourceState(stagingResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
 
-        stagingTexture.SetD3D12Resource(stagingResource);
+        stagingTexture.SetD3D12Resource(m_Device, stagingResource);
         stagingTexture.CreateViews();
         stagingTexture.SetName(L"Pano to Cubemap Staging Texture");
 

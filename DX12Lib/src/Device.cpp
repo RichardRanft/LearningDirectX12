@@ -157,7 +157,7 @@ Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::CreateDX12Device(Microsoft
         // Enable debug messages in debug mode.
 #if defined(_DEBUG)
     ComPtr<ID3D12InfoQueue> pInfoQueue;
-    if (SUCCEEDED(affinityDevice.As(&pInfoQueue)))
+    if (SUCCEEDED(d3d12Device6.As(&pInfoQueue)))
     {
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -269,11 +269,15 @@ UINT Device::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) c
     return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
 }
 
+SwapChain Device::CreateSwapChain(HWND hWnd)
+{
+    return SwapChain(shared_from_this(), hWnd);
+}
+
 RootSignature Device::CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
 {
     return RootSignature(shared_from_this(), rootSignatureDesc, m_RootSignatureFeatureData.HighestVersion);
 }
-
 
 Texture Device::CreateTexture(const D3D12_RESOURCE_DESC& desc,
     const D3D12_CLEAR_VALUE* clearValue,
@@ -281,4 +285,11 @@ Texture Device::CreateTexture(const D3D12_RESOURCE_DESC& desc,
     const std::wstring& name)
 {
     return Texture(shared_from_this(), desc, clearValue, textureUsage, name);
+}
+
+Texture Device::CreateTexture(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
+    TextureUsage textureUsage,
+    const std::wstring& name)
+{
+    return Texture(shared_from_this(), resource, textureUsage, name);
 }

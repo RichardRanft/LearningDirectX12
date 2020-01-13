@@ -62,6 +62,13 @@ public:
     const RenderTarget& GetRenderTarget() const;
 
     /**
+     * Should this window be rendered with vertical refresh synchronization.
+     */
+    bool IsVSync() const;
+    void SetVSync(bool vSync);
+    void ToggleVSync();
+
+    /**
      * Present the swapchain's back buffer to the screen.
      * Returns the current back buffer index after the present.
      *
@@ -73,6 +80,8 @@ public:
     UINT Present(const Texture& texture = Texture());
 
 protected:
+    friend class Device;
+
     SwapChain(std::shared_ptr<Device> device, HWND hWnd);
 
     // Create the swapchian.

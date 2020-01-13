@@ -31,7 +31,7 @@ void Mesh::Render(CommandList& commandList, uint32_t instanceCount, uint32_t fir
     }
     else
     {
-        commandList.Draw(m_VertexBuffer.GetNumVertices(), instanceCount, 0, firstInstance);
+        commandList.Draw((uint32_t)m_VertexBuffer.GetNumVertices(), instanceCount, 0u, firstInstance);
     }
 }
 

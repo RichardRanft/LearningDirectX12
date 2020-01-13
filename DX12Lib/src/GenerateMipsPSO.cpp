@@ -14,13 +14,6 @@ GenerateMipsPSO::GenerateMipsPSO(std::shared_ptr<Device> device)
 {
     auto d3d12Device = device->GetD3D12Device();
 
-    D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-    featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    if ( FAILED( d3d12Device->CheckFeatureSupport( D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof( featureData ) ) ) )
-    {
-        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-    }
-
     CD3DX12_DESCRIPTOR_RANGE1 srcMip( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE );
     CD3DX12_DESCRIPTOR_RANGE1 outMip( D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE );
 
@@ -42,10 +35,7 @@ GenerateMipsPSO::GenerateMipsPSO(std::shared_ptr<Device> device)
         rootParameters, 1, &linearClampSampler
     );
 
-    m_RootSignature.SetRootSignatureDesc( 
-        rootSignatureDesc.Desc_1_1, 
-        featureData.HighestVersion 
-    );
+    m_RootSignature = m_Device->CreateRootSignature(rootSignatureDesc.Desc_1_1);
 
     // Create the PSO for GenerateMips shader.
     D3DX12_AFFINITY_COMPUTE_PIPELINE_STATE_DESC computePipelineState = {};

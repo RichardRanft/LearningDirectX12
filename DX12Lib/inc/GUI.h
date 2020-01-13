@@ -32,26 +32,27 @@
 
 #include "imgui.h"
 
+#include <RootSignature.h>
+#include <Texture.h>
+
 #include <d3dx12.h>
 #include <wrl.h>
 
 class CommandList;
 class Device;
-class Texture;
 class RenderTarget;
-class RootSignature;
 
 class GUI
 {
 public:
     GUI();
-    GUI(const GUI& copy);
+    GUI(const GUI& copy) = delete;
     GUI(GUI&& copy);
 
     virtual ~GUI();
 
-    GUI& operator=(const GUI& copy);
-    GUI& operator=(GUI&& copy);
+    GUI& operator=(const GUI& copy) = delete;
+    GUI& operator=(GUI&& copy) noexcept;
 
     // Initialize the ImGui context.
     virtual bool Initialize( HWND window );
@@ -71,6 +72,7 @@ protected:
 
 private:
     std::shared_ptr<Device> m_Device;
+    HWND m_hWnd;
     ImGuiContext* m_pImGuiCtx;
     Texture m_FontTexture;
     RootSignature m_RootSignature;

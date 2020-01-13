@@ -32,6 +32,7 @@
 
 #include <DescriptorAllocation.h>
 #include <RootSignature.h>
+#include <SwapChain.h>
 #include <Texture.h>
 
 #include <memory>
@@ -146,6 +147,13 @@ public:
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
     /**
+     * Create a swap chain for a given window.
+     * 
+     * @param hWnd The handle to the window to create the swapchain for.
+     */
+     SwapChain CreateSwapChain(HWND hWnd);
+
+    /**
      * Create a root signature from a root signature description.
      *
      * @param rootSignatureDesc Describes the layout of a root signature (version 1.1).
@@ -165,6 +173,17 @@ public:
      */
     Texture CreateTexture(const D3D12_RESOURCE_DESC& desc,
         const D3D12_CLEAR_VALUE* clearValue = nullptr,
+        TextureUsage textureUsage = TextureUsage::Albedo,
+        const std::wstring& name = L"");
+
+    /**
+     * Create a texture from an existing resource.
+     * 
+     * @param resource The resource to create the texture.
+     * @param textureUsage Describes how the texture is used.
+     * @param name A human-readable name for the texture. Useful for debugging.
+     */
+    Texture CreateTexture(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
         TextureUsage textureUsage = TextureUsage::Albedo,
         const std::wstring& name = L"");
 

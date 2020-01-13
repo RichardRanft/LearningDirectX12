@@ -37,6 +37,7 @@
 #include <Mesh.h>
 #include <RenderTarget.h>
 #include <RootSignature.h>
+#include <SwapChain.h>
 #include <Texture.h>
 #include <VertexBuffer.h>
 
@@ -47,7 +48,7 @@ class Tutorial3 : public Game
 public:
     using super = Game;
 
-    Tutorial3(const std::wstring& name, int width, int height, bool vSync = false);
+    Tutorial3(const std::wstring& name, int width, int height);
     virtual ~Tutorial3();
 
     /**
@@ -96,7 +97,8 @@ protected:
 
 private:
     std::shared_ptr<Device> m_Device;
-    
+    SwapChain m_SwapChain;
+
     // Some geometry to render.
     std::unique_ptr<Mesh> m_CubeMesh;
     std::unique_ptr<Mesh> m_SphereMesh;

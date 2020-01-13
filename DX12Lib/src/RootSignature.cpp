@@ -7,7 +7,7 @@
 RootSignature::RootSignature() noexcept
     : m_Device(nullptr)
     , m_RootSignatureDesc{}
-    , m_RootSignatureVersion(D3D_ROOT_SIGNATURE_VERSION_1_0)
+    , m_RootSignatureVersion(D3D_ROOT_SIGNATURE_VERSION_1_1)
     , m_NumDescriptorsPerTable{0}
     , m_SamplerTableBitMask(0)
     , m_DescriptorTableBitMask(0)
@@ -67,7 +67,7 @@ RootSignature& RootSignature::operator=(RootSignature&& other) noexcept
     m_RootSignature = std::move(other.m_RootSignature);
     std::move(other.m_NumDescriptorsPerTable, other.m_NumDescriptorsPerTable + 32, m_NumDescriptorsPerTable);
     m_SamplerTableBitMask = other.m_SamplerTableBitMask;
-    m_DescriptorTableBitMask = other.m_SamplerTableBitMask;
+    m_DescriptorTableBitMask = other.m_DescriptorTableBitMask;
 
     memset(&other.m_RootSignatureDesc, 0, sizeof(D3D12_ROOT_SIGNATURE_DESC1));
     other.m_SamplerTableBitMask = 0;

@@ -81,8 +81,8 @@ protected:
     GenerateMipsPSO(std::shared_ptr<Device> device);
 
 private:
-    RootSignature m_RootSignature;
     std::shared_ptr<Device> m_Device;
+    RootSignature m_RootSignature;
     Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> m_PipelineState;
     // Default (no resource) UAV's to pad the unused UAV descriptors.
     // If generating less than 4 mip map levels, the unused mip maps

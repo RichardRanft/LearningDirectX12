@@ -43,7 +43,7 @@ public:
     /**
      * Create the DirectX demo using the specified window dimensions.
      */
-    Game(const std::wstring& name, int width, int height, bool vSync);
+    Game(const std::wstring& name, int width, int height);
     virtual ~Game();
 
     int GetClientWidth() const
@@ -141,5 +141,4 @@ private:
     std::wstring m_Name;
     int m_Width;
     int m_Height;
-    bool m_vSync;
 };

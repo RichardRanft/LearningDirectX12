@@ -4,11 +4,10 @@
 #include <Game.h>
 #include <Window.h>
 
-Game::Game( const std::wstring& name, int width, int height, bool vSync )
+Game::Game( const std::wstring& name, int width, int height)
     : m_Name( name )
     , m_Width( width )
     , m_Height( height )
-    , m_vSync( vSync )
 {
 }
 

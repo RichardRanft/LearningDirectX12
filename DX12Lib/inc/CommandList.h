@@ -33,7 +33,7 @@
  */
 #include "TextureUsage.h"
 
-#include <d3d12.h>
+#include <d3dx12affinity.h>
 #include <wrl.h>
 
 #include <map> // for std::map

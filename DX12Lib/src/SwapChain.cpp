@@ -10,7 +10,7 @@
 SwapChain::SwapChain()
 : m_Device(nullptr)
 , m_hWnd(0)
-, m_VSync(false)
+, m_VSync(true)
 , m_IsTearingSupported(false)
 , m_FenceValues{0}
 , m_FrameValues{0}
@@ -24,7 +24,7 @@ SwapChain::SwapChain()
 SwapChain::SwapChain(std::shared_ptr<Device> device, HWND hWnd)
     : m_Device(device)
     , m_hWnd(hWnd)
-    , m_VSync(false)
+    , m_VSync(true)
     , m_IsTearingSupported(false)
     , m_FrameCounter(0)
 {
@@ -36,7 +36,7 @@ SwapChain::SwapChain(std::shared_ptr<Device> device, HWND hWnd)
     m_FrameValues.resize(m_BufferCount);
     m_BackBufferTextures.resize(m_BufferCount);
 
-    for (int i = 0; i < m_BufferCount; ++i)
+    for (uint32_t i = 0; i < m_BufferCount; ++i)
     {
         m_BackBufferTextures[i].SetName(L"Backbuffer[" + std::to_wstring(i) + L"]");
     }
@@ -107,14 +107,14 @@ void SwapChain::CreateSwapChain()
 
 void SwapChain::UpdateRenderTargetViews()
 {
-    for (int i = 0; i < m_BufferCount; ++i)
+    for (uint32_t i = 0; i < m_BufferCount; ++i)
     {
         ComPtr<CD3DX12AffinityResource> backBuffer;
         ThrowIfFailed(m_dxgiSwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
         ResourceStateTracker::AddGlobalResourceState(backBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
 
-        m_BackBufferTextures[i].SetD3D12Resource(backBuffer);
+        m_BackBufferTextures[i] = m_Device->CreateTexture(backBuffer, TextureUsage::RenderTarget, L"Backbuffer Texture");
         m_BackBufferTextures[i].CreateViews();
     }
 }
@@ -123,6 +123,21 @@ const RenderTarget& SwapChain::GetRenderTarget() const
 {
     m_RenderTarget.AttachTexture(AttachmentPoint::Color0, m_BackBufferTextures[m_CurrentBackBufferIndex]);
     return m_RenderTarget;
+}
+
+bool SwapChain::IsVSync() const
+{
+    return m_VSync;
+}
+
+void SwapChain::SetVSync(bool vSync)
+{
+    m_VSync = vSync;
+}
+
+void SwapChain::ToggleVSync()
+{
+    m_VSync = !m_VSync;
 }
 
 UINT SwapChain::Present(const Texture& texture)

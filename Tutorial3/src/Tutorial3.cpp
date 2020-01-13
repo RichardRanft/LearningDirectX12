@@ -5,6 +5,7 @@
 #include <CommandList.h>
 #include <Device.h>
 #include <Helpers.h>
+#include <GUI.h>
 #include <Light.h>
 #include <Material.h>
 #include <Window.h>
@@ -82,8 +83,8 @@ XMMATRIX XM_CALLCONV LookAtMatrix( FXMVECTOR Position, FXMVECTOR Direction, FXMV
     return M;
 }
 
-Tutorial3::Tutorial3( const std::wstring& name, int width, int height, bool vSync )
-    : super( name, width, height, vSync )
+Tutorial3::Tutorial3(const std::wstring& name, int width, int height)
+    : super(name, width, height)
     , m_ScissorRect( CD3DX12_RECT( 0, 0, LONG_MAX, LONG_MAX ) )
     , m_Viewport( CD3DX12_VIEWPORT( 0.0f, 0.0f, static_cast<float>( width ), static_cast<float>( height ) ) )
     , m_Forward( 0 )
@@ -120,6 +121,8 @@ Tutorial3::~Tutorial3()
 
 bool Tutorial3::LoadContent()
 {
+    m_SwapChain = m_Device->CreateSwapChain(m_pWindow->GetWindowHandle());
+
     auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
@@ -185,6 +188,8 @@ bool Tutorial3::LoadContent()
     graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     graphicsPipelineStateDesc.VS = CD3DX12_SHADER_BYTECODE( vertexShaderBlob.Get() );
     graphicsPipelineStateDesc.PS = CD3DX12_SHADER_BYTECODE( pixelShaderBlob.Get() );
+    graphicsPipelineStateDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    graphicsPipelineStateDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     graphicsPipelineStateDesc.DSVFormat = depthBufferFormat;
     graphicsPipelineStateDesc.NumRenderTargets = 1;
     graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -565,7 +570,7 @@ void Tutorial3::OnRender( RenderEventArgs& e )
     }
 
     // Present
-    m_pWindow->Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
+    m_SwapChain.Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
 }
 
 static bool g_AllowFullscreenToggle = true;
@@ -593,7 +598,7 @@ void Tutorial3::OnKeyPressed( KeyEventArgs& e )
                 break;
                 }
             case KeyCode::V:
-                m_pWindow->ToggleVSync();
+                m_SwapChain.ToggleVSync();
                 break;
             case KeyCode::R:
                 // Reset camera transform

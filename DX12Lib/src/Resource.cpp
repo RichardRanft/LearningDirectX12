@@ -107,9 +107,13 @@ Resource::~Resource()
 {
 }
 
-void Resource::SetD3D12Resource(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> d3d12Resource, const D3D12_CLEAR_VALUE* clearValue)
+void Resource::SetD3D12Resource(std::shared_ptr<Device> device,
+    Microsoft::WRL::ComPtr<CD3DX12AffinityResource> d3d12Resource, 
+    const D3D12_CLEAR_VALUE* clearValue)
 {
+    m_Device = device;
     m_d3d12Resource = d3d12Resource;
+
     if ( m_d3d12ClearValue )
     {
         m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>( *clearValue );

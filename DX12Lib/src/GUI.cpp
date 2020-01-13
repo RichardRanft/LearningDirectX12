@@ -43,38 +43,69 @@ void GetSurfaceInfo(
     _Out_opt_ size_t* outRowBytes,
     _Out_opt_ size_t* outNumRows );
 
-GUI::GUI(std::shared_ptr<Device> device)
-    : m_Device(device)
-    , m_pImGuiCtx( nullptr )
+GUI::GUI()
+: m_Device(nullptr)
+, m_hWnd(0)
+, m_pImGuiCtx(nullptr)
+, m_PipelineState(nullptr)
 {}
 
-GUI::GUI(const GUI& copy)
-    : m_Device(copy.m_Device)
-    , m_pImGuiCtx(copy.m_pImGuiCtx)
-    , m_FontTexture(copy.m_FontTexture)
-    , m_RootSignature(copy.m_RootSignature)
-    , m_PipelineState(copy.m_PipelineState)
+GUI::GUI(std::shared_ptr<Device> device)
+    : m_Device(device)
+    , m_hWnd(0)
+    , m_pImGuiCtx(nullptr)
 {}
+
+GUI::GUI(GUI&& copy)
+: m_Device(std::move(copy.m_Device))
+, m_hWnd(copy.m_hWnd)
+, m_pImGuiCtx(copy.m_pImGuiCtx)
+, m_FontTexture(std::move(copy.m_FontTexture))
+, m_RootSignature(std::move(copy.m_RootSignature))
+, m_PipelineState(std::move(copy.m_PipelineState))
+{
+    copy.m_pImGuiCtx = nullptr;
+    copy.m_hWnd = 0;
+}
 
 GUI::~GUI()
 {
     Destroy();
 }
 
+GUI& GUI::operator=(GUI&& copy) noexcept
+{
+    assert( this != &copy );
+
+    m_Device = std::move(copy.m_Device);
+    m_hWnd = copy.m_hWnd;
+    m_pImGuiCtx = copy.m_pImGuiCtx;
+    m_FontTexture = std::move(copy.m_FontTexture);
+    m_RootSignature = std::move(copy.m_RootSignature);
+    m_PipelineState = std::move(copy.m_PipelineState);
+
+    copy.m_pImGuiCtx = nullptr;
+    copy.m_hWnd = 0;
+
+    return *this;
+}
+
 bool GUI::Initialize( HWND window )
 {
     assert( m_Device != nullptr );
 
+    m_hWnd = window;
+
     m_pImGuiCtx = ImGui::CreateContext();
     ImGui::SetCurrentContext( m_pImGuiCtx );
-    if ( !ImGui_ImplWin32_Init( window ) )
+    if ( !ImGui_ImplWin32_Init(m_hWnd) )
     {
         return false;
     }
 
     ImGuiIO& io = ImGui::GetIO();
 
-	io.FontGlobalScale = ::GetDpiForWindow(window) / 96.0f; // window->GetDPIScaling();
+	io.FontGlobalScale = ::GetDpiForWindow(m_hWnd) / 96.0f; // window->GetDPIScaling();
 	// Allow user UI scaling using CTRL+Mouse Wheel scrolling
 	io.FontAllowUserScaling = true;
 
@@ -83,7 +114,7 @@ bool GUI::Initialize( HWND window )
     int width, height;
     io.Fonts->GetTexDataAsRGBA32( &pixelData, &width, &height );
 
-    auto device = m_Device->GetD3D12Device();
+    auto d3d12Device = m_Device->GetD3D12Device();
     auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
@@ -104,12 +135,6 @@ bool GUI::Initialize( HWND window )
     commandQueue->ExecuteCommandList( commandList );
 
     // Create the root signature for the ImGUI shaders.
-    D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-    featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    if ( FAILED( device->CheckFeatureSupport( D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof( featureData ) ) ) )
-    {
-        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-    }
     // Allow input layout and deny unnecessary access to certain pipeline stages.
     D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -130,7 +155,7 @@ bool GUI::Initialize( HWND window )
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1( RootParameters::NumRootParameters, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags );
 
-    m_RootSignature = std::make_unique<RootSignatureCtor>( m_Device, rootSignatureDescription.Desc_1_1, featureData.HighestVersion );
+    m_RootSignature = m_Device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
 
     const D3D12_INPUT_ELEMENT_DESC inputLayout[] =
     {
@@ -169,7 +194,7 @@ bool GUI::Initialize( HWND window )
     // Setup the pipeline state.
     D3DX12_AFFINITY_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc = {};
 
-    graphicsPipelineStateDesc.pRootSignature = m_RootSignature->GetRootSignature().Get();
+    graphicsPipelineStateDesc.pRootSignature = m_RootSignature.GetRootSignature().Get();
     graphicsPipelineStateDesc.InputLayout = { inputLayout, 3 };
     graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     graphicsPipelineStateDesc.VS = { g_ImGUI_VS, sizeof( g_ImGUI_VS ) };
@@ -181,7 +206,7 @@ bool GUI::Initialize( HWND window )
     graphicsPipelineStateDesc.RasterizerState = CD3DX12_RASTERIZER_DESC( rasterizerDesc );
     graphicsPipelineStateDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( depthStencilDesc );
     
-    ThrowIfFailed( device->CreateGraphicsPipelineState( &graphicsPipelineStateDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
+    ThrowIfFailed( d3d12Device->CreateGraphicsPipelineState( &graphicsPipelineStateDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
 
     return true;
 }
@@ -207,7 +232,7 @@ void GUI::Render( std::shared_ptr<CommandList> commandList, const RenderTarget& 
 
     ImVec2 displayPos = drawData->DisplayPos;
 
-    commandList->SetGraphicsRootSignature( *m_RootSignature );
+    commandList->SetGraphicsRootSignature( m_RootSignature );
     commandList->SetPipelineState( m_PipelineState );
     commandList->SetRenderTarget( renderTarget );
 
@@ -226,7 +251,7 @@ void GUI::Render( std::shared_ptr<CommandList> commandList, const RenderTarget& 
     };
 
     commandList->SetGraphics32BitConstants( RootParameters::MatrixCB, mvp );
-    commandList->SetShaderResourceView( RootParameters::FontTexture, 0, *m_FontTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+    commandList->SetShaderResourceView( RootParameters::FontTexture, 0, m_FontTexture, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
 
     D3D12_VIEWPORT viewport = {};
     viewport.Width = drawData->DisplaySize.x;
@@ -284,9 +309,13 @@ void GUI::Render( std::shared_ptr<CommandList> commandList, const RenderTarget& 
 
 void GUI::Destroy()
 {
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext( m_pImGuiCtx );
-    m_pImGuiCtx = nullptr;
+    if ( m_pImGuiCtx )
+    {
+        ImGui_ImplWin32_Shutdown();
+        ImGui::DestroyContext(m_pImGuiCtx);
+        m_pImGuiCtx = nullptr;
+        m_hWnd = 0;
+    }
 }
 
 void GUI::SetScaling(float scale)
