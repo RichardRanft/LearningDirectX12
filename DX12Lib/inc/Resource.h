@@ -42,7 +42,7 @@ class Device;
 class Resource
 {
 public:
-    Resource();
+    explicit Resource(const std::wstring& name = L"");
     Resource(const Resource& copy);
     Resource(Resource&& copy) noexcept;
 
