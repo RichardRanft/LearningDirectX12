@@ -70,7 +70,6 @@ public:
      * Since the DynamicDescriptorHeap can't know which function will be used, it must
      * be passed as an argument to the function.
      */
-    void CommitStagedDescriptors( CommandList& commandList, std::function<void(ID3D12GraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc );
     void CommitStagedDescriptorsForDraw(CommandList& commandList);
     void CommitStagedDescriptorsForDispatch(CommandList& commandList);
 
@@ -107,15 +106,17 @@ public:
 
 protected:
     DynamicDescriptorHeap(
-        Device& device,
+        std::shared_ptr<Device> device,
         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
         uint32_t numDescriptorsPerHeap = 1024 );
 
+    void CommitStagedDescriptors(CommandList& commandList, std::function<void(CD3DX12AffinityGraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc);
+
 private:
     // Request a descriptor heap if one is available.
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RequestDescriptorHeap();
+    Microsoft::WRL::ComPtr<CD3DX12AffinityDescriptorHeap> RequestDescriptorHeap();
     // Create a new descriptor heap of no descriptor heap is available.
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap();
+    Microsoft::WRL::ComPtr<CD3DX12AffinityDescriptorHeap> CreateDescriptorHeap();
 
     // Compute the number of stale descriptors that need to be copied
     // to GPU visible descriptor heap.
@@ -180,13 +181,13 @@ private:
     // descriptors were copied.
     uint32_t m_StaleDescriptorTableBitMask;
 
-    using DescriptorHeapPool = std::queue< Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> >;
+    using DescriptorHeapPool = std::queue< Microsoft::WRL::ComPtr<CD3DX12AffinityDescriptorHeap> >;
 
-    Device& m_Device;
+    std::shared_ptr<Device> m_Device;
     DescriptorHeapPool m_DescriptorHeapPool;
     DescriptorHeapPool m_AvailableDescriptorHeaps;
 
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_CurrentDescriptorHeap;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityDescriptorHeap> m_CurrentDescriptorHeap;
     CD3DX12_GPU_DESCRIPTOR_HANDLE m_CurrentGPUDescriptorHandle;
     CD3DX12_CPU_DESCRIPTOR_HANDLE m_CurrentCPUDescriptorHandle;
 

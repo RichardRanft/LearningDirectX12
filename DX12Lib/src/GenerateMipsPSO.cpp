@@ -48,23 +48,14 @@ GenerateMipsPSO::GenerateMipsPSO(std::shared_ptr<Device> device)
     );
 
     // Create the PSO for GenerateMips shader.
-    struct PipelineStateStream
-    {
-        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        CD3DX12_PIPELINE_STATE_STREAM_CS CS;
-    } pipelineStateStream;
+    D3DX12_AFFINITY_COMPUTE_PIPELINE_STATE_DESC computePipelineState = {};
+    computePipelineState.pRootSignature = m_RootSignature.GetRootSignature().Get();
+    computePipelineState.CS = { g_GenerateMips_CS, sizeof( g_GenerateMips_CS ) };
 
-    pipelineStateStream.pRootSignature = m_RootSignature.GetRootSignature().Get();
-    pipelineStateStream.CS = { g_GenerateMips_CS, sizeof( g_GenerateMips_CS ) };
-
-    D3D12_PIPELINE_STATE_STREAM_DESC pipelineStateStreamDesc = {
-        sizeof( PipelineStateStream ), &pipelineStateStream
-    };
-
-    ThrowIfFailed( d3d12Device->CreatePipelineState( &pipelineStateStreamDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
+    ThrowIfFailed( d3d12Device->CreateComputePipelineState( &computePipelineState, IID_PPV_ARGS( &m_PipelineState ) ) );
 
     // Create some default texture UAV's to pad any unused UAV's during mip map generation.
-    m_DefaultUAV = device.AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 );
+    m_DefaultUAV = device->AllocateDescriptors( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 );
 
     for ( UINT i = 0; i < 4; ++i )
     {

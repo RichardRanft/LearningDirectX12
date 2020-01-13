@@ -49,7 +49,7 @@ public:
                       const D3D12_CLEAR_VALUE* clearValue = nullptr,
                       TextureUsage textureUsage = TextureUsage::Albedo,
                       const std::wstring& name = L"" );
-    explicit Texture( Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+    explicit Texture(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
                       TextureUsage textureUsage = TextureUsage::Albedo,
                       const std::wstring& name = L"");
 

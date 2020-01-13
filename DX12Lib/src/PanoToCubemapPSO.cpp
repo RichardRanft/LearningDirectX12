@@ -9,10 +9,10 @@
 
 #include <d3dx12.h>
 
-PanoToCubemapPSO::PanoToCubemapPSO(Device& device)
+PanoToCubemapPSO::PanoToCubemapPSO(std::shared_ptr<Device> device)
     : m_Device(device)
 {
-    auto d3d12Device = m_Device.GetD3D12Device();
+    auto d3d12Device = m_Device->GetD3D12Device();
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -42,24 +42,15 @@ PanoToCubemapPSO::PanoToCubemapPSO(Device& device)
     m_RootSignature.SetRootSignatureDesc(rootSignatureDesc.Desc_1_1, featureData.HighestVersion);
 
     // Create the PSO for GenerateMips shader.
-    struct PipelineStateStream
-    {
-        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        CD3DX12_PIPELINE_STATE_STREAM_CS CS;
-    } pipelineStateStream;
+    D3DX12_AFFINITY_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+    computePipelineStateDesc.pRootSignature = m_RootSignature.GetRootSignature().Get();
+    computePipelineStateDesc.CS = { g_PanoToCubemap_CS, sizeof(g_PanoToCubemap_CS) };
 
-    pipelineStateStream.pRootSignature = m_RootSignature.GetRootSignature().Get();
-    pipelineStateStream.CS = { g_PanoToCubemap_CS, sizeof(g_PanoToCubemap_CS) };
-
-    D3D12_PIPELINE_STATE_STREAM_DESC pipelineStateStreamDesc = {
-        sizeof(PipelineStateStream), &pipelineStateStream
-    };
-
-    ThrowIfFailed(d3d12Device->CreatePipelineState(&pipelineStateStreamDesc, IID_PPV_ARGS(&m_PipelineState)));
+    ThrowIfFailed(d3d12Device->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&m_PipelineState)));
 
     // Create some default texture UAV's to pad any unused UAV's during mip map generation.
-    m_DefaultUAV = m_Device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5);
-    UINT descriptorHandleIncrementSize = m_Device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    m_DefaultUAV = m_Device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5);
+    UINT descriptorHandleIncrementSize = m_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
     for (UINT i = 0; i < 5; ++i)
     {

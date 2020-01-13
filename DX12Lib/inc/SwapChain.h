@@ -47,6 +47,13 @@ class RenderTarget;
 class SwapChain
 {
 public:
+    SwapChain();
+    SwapChain(const SwapChain& copy) = delete;
+    SwapChain(SwapChain&& copy) = default;
+
+    SwapChain& operator=(const SwapChain& copy) = delete;
+    SwapChain& operator=(SwapChain&& copy) = default;
+
     /**
      * Get the render target of the window. This method should be called every
      * frame since the color attachment point changes depending on the window's
@@ -69,29 +76,27 @@ protected:
     SwapChain(std::shared_ptr<Device> device, HWND hWnd);
 
     // Create the swapchian.
-    Microsoft::WRL::ComPtr<IDXGISwapChain4> CreateSwapChain();
+    void CreateSwapChain();
 
     // Update the render target views for the swapchain back buffers.
     void UpdateRenderTargetViews();
 
 private:
-    // Number of swapchain back buffers.
-    static const UINT BufferCount = 3;
-
-
     std::shared_ptr<Device> m_Device;
     HWND m_hWnd;
 
     bool m_VSync;
     bool m_IsTearingSupported;
 
-    UINT64 m_FenceValues[BufferCount];
-    uint64_t m_FrameValues[BufferCount];
+    std::vector<UINT64> m_FenceValues;
+    std::vector<uint64_t> m_FrameValues;
     uint64_t m_FrameCounter;
 
-    Microsoft::WRL::ComPtr<IDXGISwapChain4> m_dxgiSwapChain;
+    Microsoft::WRL::ComPtr<CDXGIAffinitySwapChain> m_dxgiSwapChain;
     HANDLE m_SwapChainEvent;
-    Texture m_BackBufferTextures[BufferCount];
+
+    uint32_t m_BufferCount;
+    std::vector<Texture> m_BackBufferTextures;
     
     // Marked mutable to allow modification in a const function.
     mutable RenderTarget m_RenderTarget;

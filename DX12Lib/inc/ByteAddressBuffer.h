@@ -43,6 +43,14 @@ class Device;
 class ByteAddressBuffer : public Buffer
 {
 public:
+    ByteAddressBuffer();
+    ByteAddressBuffer(const ByteAddressBuffer& copy) = default;
+    ByteAddressBuffer(ByteAddressBuffer&& copy) = default;
+
+    ByteAddressBuffer& operator=(const ByteAddressBuffer& copy) = default;
+    ByteAddressBuffer& operator=(ByteAddressBuffer&& copy) = default;
+
+
     size_t GetBufferSize() const
     {
         return m_BufferSize;
@@ -72,16 +80,13 @@ public:
     }
 
 protected:
-    friend class Device;
-    friend class StructuredBuffer;
-
     ByteAddressBuffer(
-        Device& device,
+        std::shared_ptr<Device> device,
         const std::wstring& name
     );
 
     ByteAddressBuffer(
-        Device& device,
+        std::shared_ptr<Device> device,
         const D3D12_RESOURCE_DESC& resDesc,
         size_t numElements, size_t elementSize,
         const std::wstring& name

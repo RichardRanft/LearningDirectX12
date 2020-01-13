@@ -31,17 +31,20 @@
  *  other resource types (Buffers & Textures).
  */
 
-#include <d3d12.h>
+#include <d3dx12affinity.h>
 #include <wrl.h>
 
 #include <memory>
 #include <string>
 
+class Device;
+
 class Resource
 {
 public:
+    Resource();
     Resource(const Resource& copy);
-    Resource(Resource&& copy);
+    Resource(Resource&& copy) noexcept;
 
     Resource& operator=( const Resource& other);
     Resource& operator=(Resource&& other) noexcept;
@@ -115,8 +118,6 @@ public:
     
 
 protected:
-    friend class Device;
-
     Resource(std::shared_ptr<Device> device, const std::wstring& name = L"");
     Resource(std::shared_ptr<Device> device,
         const D3D12_RESOURCE_DESC& resourceDesc,

@@ -21,7 +21,7 @@ Texture::Texture( const D3D12_RESOURCE_DESC& resourceDesc,
     CreateViews();
 }
 
-Texture::Texture( Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+Texture::Texture(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
                   TextureUsage textureUsage,
                   const std::wstring& name )
     : Resource(resource, name)

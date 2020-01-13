@@ -7,6 +7,20 @@
 #include <Device.h>
 #include <ResourceStateTracker.h>
 
+SwapChain::SwapChain()
+: m_Device(nullptr)
+, m_hWnd(0)
+, m_VSync(false)
+, m_IsTearingSupported(false)
+, m_FenceValues{0}
+, m_FrameValues{0}
+, m_FrameCounter(0)
+, m_dxgiSwapChain(nullptr)
+, m_SwapChainEvent(0)
+, m_BufferCount(0)
+, m_CurrentBackBufferIndex(0)
+{}
+
 SwapChain::SwapChain(std::shared_ptr<Device> device, HWND hWnd)
     : m_Device(device)
     , m_hWnd(hWnd)
@@ -14,23 +28,29 @@ SwapChain::SwapChain(std::shared_ptr<Device> device, HWND hWnd)
     , m_IsTearingSupported(false)
     , m_FrameCounter(0)
 {
-    for (int i = 0; i < BufferCount; ++i)
+    uint32_t nodeCount = m_Device->GetNodeCount();
+    uint32_t buffersPerNode = nodeCount > 1 ? 1 : 2;
+    m_BufferCount = buffersPerNode * nodeCount;
+
+    m_FenceValues.resize(m_BufferCount);
+    m_FrameValues.resize(m_BufferCount);
+    m_BackBufferTextures.resize(m_BufferCount);
+
+    for (int i = 0; i < m_BufferCount; ++i)
     {
         m_BackBufferTextures[i].SetName(L"Backbuffer[" + std::to_wstring(i) + L"]");
     }
 
-    m_dxgiSwapChain = CreateSwapChain();
+    CreateSwapChain();
     UpdateRenderTargetViews();
-
 }
 
 // Create the swapchian.
-Microsoft::WRL::ComPtr<IDXGISwapChain4> SwapChain::CreateSwapChain()
+void SwapChain::CreateSwapChain()
 {
     RECT clientRect;
     ::GetClientRect(m_hWnd, &clientRect);
 
-    ComPtr<IDXGISwapChain4> dxgiSwapChain4;
     ComPtr<IDXGIFactory7> dxgiFactory;
     UINT createFactoryFlags = 0;
 #if defined(_DEBUG)
@@ -50,42 +70,46 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> SwapChain::CreateSwapChain()
     swapChainDesc.Stereo = FALSE;
     swapChainDesc.SampleDesc = { 1, 0 };
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = BufferCount;
+    swapChainDesc.BufferCount = m_BufferCount;
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
     // It is recommended to always allow tearing if tearing support is available.
     swapChainDesc.Flags = m_IsTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
-    ID3D12CommandQueue* pCommandQueue = m_Device->GetCommandQueue()->GetD3D12CommandQueue().Get();
 
-    ComPtr<IDXGISwapChain1> swapChain1;
+    auto d3d12Device = m_Device->GetD3D12Device();
+    auto commandQueue = m_Device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto d3d12CommandQueue = commandQueue->GetD3D12CommandQueue();
+
+    ComPtr<IDXGISwapChain1> swapChain;
     ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-        pCommandQueue,
+        d3d12CommandQueue->GetChildObject(0),
         m_hWnd,
         &swapChainDesc,
         nullptr,
         nullptr,
-        &swapChain1));
+        &swapChain));
 
     // Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
     // will be handled manually.
-    ThrowIfFailed(dxgiFactory->MakeWindowAssociation(m_hWnd, DXGI_MWA_NO_ALT_ENTER));
+    if ( m_IsTearingSupported )
+    {
+        ThrowIfFailed(dxgiFactory->MakeWindowAssociation(m_hWnd, DXGI_MWA_NO_ALT_ENTER));
+    }
 
-    ThrowIfFailed(swapChain1.As(&dxgiSwapChain4));
+    ThrowIfFailed(DXGIXAffinityCreateLDASwapChain(swapChain.Get(), d3d12CommandQueue.Get(), d3d12Device.Get(), &m_dxgiSwapChain));
 
-    m_CurrentBackBufferIndex = dxgiSwapChain4->GetCurrentBackBufferIndex();
-    dxgiSwapChain4->SetMaximumFrameLatency(BufferCount - 1);
-    m_SwapChainEvent = dxgiSwapChain4->GetFrameLatencyWaitableObject();
-
-    return dxgiSwapChain4;
+    m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
+    m_dxgiSwapChain->SetMaximumFrameLatency(m_BufferCount - 1);
+    m_SwapChainEvent = m_dxgiSwapChain->GetFrameLatencyWaitableObject();
 }
 
 void SwapChain::UpdateRenderTargetViews()
 {
-    for (int i = 0; i < BufferCount; ++i)
+    for (int i = 0; i < m_BufferCount; ++i)
     {
-        ComPtr<ID3D12Resource> backBuffer;
+        ComPtr<CD3DX12AffinityResource> backBuffer;
         ThrowIfFailed(m_dxgiSwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
         ResourceStateTracker::AddGlobalResourceState(backBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
@@ -103,7 +127,7 @@ const RenderTarget& SwapChain::GetRenderTarget() const
 
 UINT SwapChain::Present(const Texture& texture)
 {
-    auto commandQueue = m_Device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto commandQueue = m_Device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = commandQueue->GetCommandList();
 
     auto& backBuffer = m_BackBufferTextures[m_CurrentBackBufferIndex];
@@ -128,13 +152,13 @@ UINT SwapChain::Present(const Texture& texture)
     ThrowIfFailed(m_dxgiSwapChain->Present(syncInterval, presentFlags));
 
     m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->Signal();
-    m_FrameValues[m_CurrentBackBufferIndex] = m_Device.IncrementFrameCounter();
+    m_FrameValues[m_CurrentBackBufferIndex] = m_Device->IncrementFrameCounter();
 
     m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
 
     commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 
-    m_Device.ReleaseStaleDescriptors(m_FrameValues[m_CurrentBackBufferIndex]);
+    m_Device->ReleaseStaleDescriptors(m_FrameValues[m_CurrentBackBufferIndex]);
 
     return m_CurrentBackBufferIndex;
 }

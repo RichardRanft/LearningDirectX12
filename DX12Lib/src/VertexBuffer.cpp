@@ -4,7 +4,14 @@
 
 #include <Device.h>
 
-VertexBuffer::VertexBuffer(Device& device, const std::wstring& name)
+VertexBuffer::VertexBuffer()
+: Buffer()
+, m_NumVertices(0)
+, m_VertexStride(0)
+, m_VertexBufferView({})
+{}
+
+VertexBuffer::VertexBuffer(std::shared_ptr<Device> device, const std::wstring& name)
     : Buffer(device, name)
     , m_NumVertices(0)
     , m_VertexStride(0)

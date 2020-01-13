@@ -8,7 +8,6 @@ RootSignature::RootSignature() noexcept
     : m_Device(nullptr)
     , m_RootSignatureDesc{}
     , m_RootSignatureVersion(D3D_ROOT_SIGNATURE_VERSION_1_0)
-    , m_NodeMask(0)
     , m_NumDescriptorsPerTable{0}
     , m_SamplerTableBitMask(0)
     , m_DescriptorTableBitMask(0)
@@ -17,23 +16,20 @@ RootSignature::RootSignature() noexcept
 RootSignature::RootSignature(
     std::shared_ptr<Device> device,
     const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc, 
-    D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion,
-    uint32_t nodeMask )
+    D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion )
     : m_Device(device)
     , m_RootSignatureDesc{}
     , m_RootSignatureVersion(rootSignatureVersion)
-    , m_NodeMask(nodeMask)
     , m_NumDescriptorsPerTable{0}
     , m_SamplerTableBitMask(0)
     , m_DescriptorTableBitMask(0)
 {
-    SetRootSignatureDesc(rootSignatureDesc, rootSignatureVersion, nodeMask);
+    SetRootSignatureDesc(rootSignatureDesc, rootSignatureVersion);
 }
 
 RootSignature::RootSignature(RootSignature&& other) noexcept
     : m_Device(std::move(other.m_Device))
     , m_RootSignatureDesc(other.m_RootSignatureDesc)
-    , m_NodeMask(other.m_NodeMask)
     , m_RootSignatureVersion(other.m_RootSignatureVersion)
     , m_RootSignature(std::move(other.m_RootSignature))
     , m_SamplerTableBitMask(other.m_SamplerTableBitMask)
@@ -43,7 +39,6 @@ RootSignature::RootSignature(RootSignature&& other) noexcept
 
     memset(&other.m_RootSignatureDesc, 0, sizeof(D3D12_ROOT_SIGNATURE_DESC1));
     other.m_RootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-    other.m_NodeMask = 0;
     other.m_SamplerTableBitMask = 0;
     other.m_DescriptorTableBitMask = 0;
 }
@@ -51,7 +46,7 @@ RootSignature::RootSignature(RootSignature&& other) noexcept
 RootSignature::RootSignature(const RootSignature& copy)
     : m_Device(copy.m_Device)
 {
-    SetRootSignatureDesc(copy.m_RootSignatureDesc, copy.m_RootSignatureVersion, copy.m_NodeMask);
+    SetRootSignatureDesc(copy.m_RootSignatureDesc, copy.m_RootSignatureVersion);
 }
 
 
@@ -83,9 +78,13 @@ RootSignature& RootSignature::operator=(RootSignature&& other) noexcept
 
 RootSignature& RootSignature::operator=(const RootSignature& other)
 {
+    assert( this != &other);
+
     m_Device = other.m_Device;
 
     SetRootSignatureDesc(other.m_RootSignatureDesc, other.m_RootSignatureVersion);
+
+    return *this;
 }
 
 void RootSignature::Destroy()
@@ -118,8 +117,7 @@ void RootSignature::Destroy()
 // Perform a deep copy of the root signature description.
 void RootSignature::SetRootSignatureDesc(
     const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-    D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion,
-    uint32_t nodeMask
+    D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
 )
 {
     // Make sure any previously allocated root signature description is cleaned 
@@ -129,7 +127,6 @@ void RootSignature::SetRootSignatureDesc(
     assert(m_Device && "Invalid device. Root signature must be created through a device.");
 
     m_RootSignatureVersion = rootSignatureVersion;
-    m_NodeMask = nodeMask & m_Device->GetAllNodeMask();
 
     UINT numParameters = rootSignatureDesc.NumParameters;
     D3D12_ROOT_PARAMETER1* pParameters = numParameters > 0 ? new D3D12_ROOT_PARAMETER1[numParameters] : nullptr;

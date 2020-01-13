@@ -146,7 +146,7 @@ public:
     template<typename T>
     void CopyIndexBuffer( IndexBuffer& indexBuffer, const std::vector<T>& indexBufferData )
     {
-        assert( sizeof( T ) == 2 || sizeof( T ) == 4 );
+        static_assert( sizeof( T ) == 2 || sizeof( T ) == 4, "Index buffer elements must be either 16 or 32-bits." );
 
         DXGI_FORMAT indexFormat = ( sizeof( T ) == 2 ) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
         CopyIndexBuffer( indexBuffer, indexBufferData.size(), indexFormat, indexBufferData.data() );
@@ -306,7 +306,7 @@ public:
     /**
      * Set the pipeline state object on the command list.
      */
-    void SetPipelineState( Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState );
+    void SetPipelineState( Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> pipelineState );
 
     /**
      * Set the current root signature on the command list.
@@ -390,7 +390,7 @@ public:
      * Set the currently bound descriptor heap.
      * Should only be called by the DynamicDescriptorHeap class.
      */
-    void SetDescriptorHeap( D3D12_DESCRIPTOR_HEAP_TYPE heapType, ID3D12DescriptorHeap* heap );
+    void SetDescriptorHeap( D3D12_DESCRIPTOR_HEAP_TYPE heapType, CD3DX12AffinityDescriptorHeap* heap );
 
     std::shared_ptr<CommandList> GetGenerateMipsCommandList() const
     {
@@ -401,7 +401,7 @@ protected:
     CommandList(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type);
 
 private:
-    void TrackResource(Microsoft::WRL::ComPtr<ID3D12Object> object);
+    void TrackResource(Microsoft::WRL::ComPtr<CD3DX12AffinityObject> object);
     void TrackResource(const Resource& res);
 
     // Generate mips for UAV compatible textures.
@@ -413,7 +413,7 @@ private:
     // Binds the current descriptor heaps to the command list.
     void BindDescriptorHeaps();
 
-    using TrackedObjects = std::vector < Microsoft::WRL::ComPtr<ID3D12Object> >;
+    using TrackedObjects = std::vector < Microsoft::WRL::ComPtr<CD3DX12AffinityObject> >;
 
     std::shared_ptr<Device> m_Device;
 
@@ -429,7 +429,7 @@ private:
 
     // Keep track of the currently bound root signatures to minimize root
     // signature changes.
-    ID3D12RootSignature* m_RootSignature;
+    CD3DX12AffinityRootSignature* m_RootSignature;
 
     // Resource created in an upload heap. Useful for drawing of dynamic geometry
     // or for uploading constant buffer data that changes every draw call.
@@ -447,7 +447,7 @@ private:
 
     // Keep track of the currently bound descriptor heaps. Only change descriptor 
     // heaps if they are different than the currently bound descriptor heaps.
-    ID3D12DescriptorHeap* m_DescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    CD3DX12AffinityDescriptorHeap* m_DescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 	// Pipeline state object for Mip map generation.
 	std::unique_ptr<GenerateMipsPSO> m_GenerateMipsPSO;
@@ -462,6 +462,6 @@ private:
     TrackedObjects m_TrackedObjects;
 
     // Keep track of loaded textures to avoid loading the same texture multiple times.
-    static std::map<std::wstring, ID3D12Resource* > ms_TextureCache;
+    static std::map<std::wstring, CD3DX12AffinityResource* > ms_TextureCache;
     static std::mutex ms_TextureCacheMutex;
 };
