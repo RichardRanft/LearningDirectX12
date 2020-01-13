@@ -127,6 +127,8 @@ public:
     static DXGI_FORMAT GetUAVCompatableFormat(DXGI_FORMAT format);
 
 protected:
+    friend class Device;
+
     explicit Texture(std::shared_ptr<Device> device, const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_CLEAR_VALUE* clearValue = nullptr,
         TextureUsage textureUsage = TextureUsage::Albedo,

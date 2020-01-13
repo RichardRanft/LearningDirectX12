@@ -3,6 +3,7 @@
 #include <Application.h>
 #include <CommandQueue.h>
 #include <CommandList.h>
+#include <Device.h>
 #include <Helpers.h>
 #include <Light.h>
 #include <Material.h>
@@ -98,6 +99,7 @@ Tutorial3::Tutorial3( const std::wstring& name, int width, int height, bool vSyn
     , m_Width( 0 )
     , m_Height( 0 )
 {
+    m_Device = Device::CreateDevice();
 
     XMVECTOR cameraPos = XMVectorSet( 0, 5, -20, 1 );
     XMVECTOR cameraTarget = XMVectorSet( 0, 5, 0, 1 );
@@ -118,8 +120,7 @@ Tutorial3::~Tutorial3()
 
 bool Tutorial3::LoadContent()
 {
-    auto device = Application::Get().GetDevice();
-    auto commandQueue = Application::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
+    auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
     // Create a Cube mesh
@@ -144,13 +145,6 @@ bool Tutorial3::LoadContent()
     ThrowIfFailed( D3DReadFileToBlob( L"data/shaders/Tutorial3/PixelShader.cso", &pixelShaderBlob ) );
 
     // Create a root signature.
-    D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-    featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    if ( FAILED( device->CheckFeatureSupport( D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof( featureData ) ) ) )
-    {
-        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-    }
-
     // Allow input layout and deny unnecessary access to certain pipeline stages.
     D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
         D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -174,45 +168,31 @@ bool Tutorial3::LoadContent()
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1( RootParameters::NumRootParameters, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags );
 
-    m_RootSignature.SetRootSignatureDesc( rootSignatureDescription.Desc_1_1, featureData.HighestVersion );
+    m_RootSignature = m_Device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
 
     // Setup the pipeline state.
-    struct PipelineStateStream
-    {
-        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
-        CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-        CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-        CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
-        CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
-    } pipelineStateStream;
+    D3DX12_AFFINITY_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc = {};
 
     // sRGB formats provide free gamma correction!
     DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
-    DXGI_SAMPLE_DESC sampleDesc = Application::Get().GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
+    DXGI_SAMPLE_DESC sampleDesc = m_Device->GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
 
-    D3D12_RT_FORMAT_ARRAY rtvFormats = {};
-    rtvFormats.NumRenderTargets = 1;
-    rtvFormats.RTFormats[0] = backBufferFormat;
+    graphicsPipelineStateDesc.pRootSignature = m_RootSignature.GetRootSignature().Get();
+    graphicsPipelineStateDesc.InputLayout = { VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount };
+    graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    graphicsPipelineStateDesc.VS = CD3DX12_SHADER_BYTECODE( vertexShaderBlob.Get() );
+    graphicsPipelineStateDesc.PS = CD3DX12_SHADER_BYTECODE( pixelShaderBlob.Get() );
+    graphicsPipelineStateDesc.DSVFormat = depthBufferFormat;
+    graphicsPipelineStateDesc.NumRenderTargets = 1;
+    graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    graphicsPipelineStateDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+    graphicsPipelineStateDesc.SampleDesc = sampleDesc;
 
-    pipelineStateStream.pRootSignature = m_RootSignature.GetRootSignature().Get();
-    pipelineStateStream.InputLayout = { VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount };
-    pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipelineStateStream.VS = CD3DX12_SHADER_BYTECODE( vertexShaderBlob.Get() );
-    pipelineStateStream.PS = CD3DX12_SHADER_BYTECODE( pixelShaderBlob.Get() );
-    pipelineStateStream.DSVFormat = depthBufferFormat;
-    pipelineStateStream.RTVFormats = rtvFormats;
-    pipelineStateStream.SampleDesc = sampleDesc;
-
-    D3D12_PIPELINE_STATE_STREAM_DESC pipelineStateStreamDesc = {
-        sizeof( PipelineStateStream ), &pipelineStateStream
-    };
-    ThrowIfFailed( device->CreatePipelineState( &pipelineStateStreamDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
+    auto d3d12Device = m_Device->GetD3D12Device();
+    ThrowIfFailed(d3d12Device->CreateGraphicsPipelineState( &graphicsPipelineStateDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
     auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D( backBufferFormat,
@@ -227,7 +207,7 @@ bool Tutorial3::LoadContent()
     colorClearValue.Color[2] = 0.9f;
     colorClearValue.Color[3] = 1.0f;
 
-    Texture colorTexture = Texture( colorDesc, &colorClearValue, 
+    Texture colorTexture = m_Device->CreateTexture( colorDesc, &colorClearValue, 
                                     TextureUsage::RenderTarget, 
                                     L"Color Render Target" );
 
@@ -241,7 +221,7 @@ bool Tutorial3::LoadContent()
     depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
-    Texture depthTexture = Texture( depthDesc, &depthClearValue, 
+    Texture depthTexture = m_Device->CreateTexture( depthDesc, &depthClearValue, 
                                     TextureUsage::Depth, 
                                     L"Depth Render Target" );
 
@@ -393,7 +373,7 @@ void Tutorial3::OnRender( RenderEventArgs& e )
 {
     super::OnRender( e );
 
-    auto commandQueue = Application::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
+    auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
     auto commandList = commandQueue->GetCommandList();
 
     // Clear the render targets.

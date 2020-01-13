@@ -75,6 +75,8 @@ public:
     uint32_t GetNumDescriptors(uint32_t rootIndex) const;
 
 protected:
+    friend class Device;
+
     RootSignature(
         std::shared_ptr<Device> device,
         const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,

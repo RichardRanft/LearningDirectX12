@@ -48,6 +48,14 @@ GUI::GUI(std::shared_ptr<Device> device)
     , m_pImGuiCtx( nullptr )
 {}
 
+GUI::GUI(const GUI& copy)
+    : m_Device(copy.m_Device)
+    , m_pImGuiCtx(copy.m_pImGuiCtx)
+    , m_FontTexture(copy.m_FontTexture)
+    , m_RootSignature(copy.m_RootSignature)
+    , m_PipelineState(copy.m_PipelineState)
+{}
+
 GUI::~GUI()
 {
     Destroy();
@@ -55,6 +63,8 @@ GUI::~GUI()
 
 bool GUI::Initialize( HWND window )
 {
+    assert( m_Device != nullptr );
+
     m_pImGuiCtx = ImGui::CreateContext();
     ImGui::SetCurrentContext( m_pImGuiCtx );
     if ( !ImGui_ImplWin32_Init( window ) )
@@ -78,9 +88,7 @@ bool GUI::Initialize( HWND window )
     auto commandList = commandQueue->GetCommandList();
 
     auto fontTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R8G8B8A8_UNORM, width, height );
-
-    m_FontTexture = std::make_unique<Texture>( fontTextureDesc );
-    m_FontTexture->SetName( L"ImGui Font Texture" );
+    m_FontTexture = m_Device->CreateTexture( fontTextureDesc, nullptr, TextureUsage::Font, L"ImGUI Font Texture" );
 
     size_t rowPitch, slicePitch;
     GetSurfaceInfo( width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &slicePitch, &rowPitch, nullptr );
@@ -90,8 +98,8 @@ bool GUI::Initialize( HWND window )
     subresourceData.RowPitch = rowPitch;
     subresourceData.SlicePitch = slicePitch;
 
-    commandList->CopyTextureSubresource( *m_FontTexture, 0, 1, &subresourceData );
-    commandList->GenerateMips( *m_FontTexture );
+    commandList->CopyTextureSubresource( m_FontTexture, 0, 1, &subresourceData );
+    commandList->GenerateMips( m_FontTexture );
 
     commandQueue->ExecuteCommandList( commandList );
 

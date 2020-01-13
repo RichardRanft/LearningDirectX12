@@ -44,7 +44,14 @@ class RootSignature;
 class GUI
 {
 public:
+    GUI();
+    GUI(const GUI& copy);
+    GUI(GUI&& copy);
+
     virtual ~GUI();
+
+    GUI& operator=(const GUI& copy);
+    GUI& operator=(GUI&& copy);
 
     // Initialize the ImGui context.
     virtual bool Initialize( HWND window );
@@ -65,7 +72,7 @@ protected:
 private:
     std::shared_ptr<Device> m_Device;
     ImGuiContext* m_pImGuiCtx;
-    std::unique_ptr<Texture> m_FontTexture;
-    std::unique_ptr<RootSignature> m_RootSignature;
+    Texture m_FontTexture;
+    RootSignature m_RootSignature;
     Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> m_PipelineState;
 };

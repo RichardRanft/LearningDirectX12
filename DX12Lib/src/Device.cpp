@@ -35,6 +35,7 @@ struct CommandQueueCtor : public CommandQueue
 Device::Device(uint32_t nodeMask)
     : m_NodeCount(0)
     , m_NodeMask(nodeMask)
+    , m_RootSignatureFeatureData({ D3D_ROOT_SIGNATURE_VERSION_1_1 })
 {
     // Check for DirectX Math library support.
     if (!DirectX::XMVerifyCPUSupport())
@@ -64,7 +65,7 @@ Device::Device(uint32_t nodeMask)
 
     if (dxgiAdapter)
     {
-        m_d3d12Device = CreateDevice(dxgiAdapter);
+        m_d3d12Device = CreateDX12Device(dxgiAdapter);
         if (m_d3d12Device)
         {
             m_NodeCount = std::min(m_d3d12Device->GetNodeCount(), MaxNodeCount);
@@ -77,6 +78,11 @@ Device::Device(uint32_t nodeMask)
     else
     {
         throw std::exception("DXGI adapter enumeration failed.");
+    }
+
+    if (FAILED(m_d3d12Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &m_RootSignatureFeatureData, sizeof(m_RootSignatureFeatureData))))
+    {
+        m_RootSignatureFeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
 }
 
@@ -103,7 +109,7 @@ std::shared_ptr<Device> Device::CreateDevice(uint32_t nodeMask)
 
 Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
 {
-    ComPtr<IDXGIFactory4> dxgiFactory;
+    ComPtr<IDXGIFactory6> dxgiFactory;
     UINT createFactoryFlags = 0;
 #if defined(_DEBUG)
     createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
@@ -121,21 +127,17 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
     }
     else
     {
-        SIZE_T maxDedicatedVideoMemory = 0;
-        for (UINT i = 0; dxgiFactory->EnumAdapters1(i, &dxgiAdapter1) != DXGI_ERROR_NOT_FOUND; ++i)
+        for (UINT i = 0; dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&dxgiAdapter1)) != DXGI_ERROR_NOT_FOUND; ++i)
         {
             DXGI_ADAPTER_DESC1 dxgiAdapterDesc1;
             dxgiAdapter1->GetDesc1(&dxgiAdapterDesc1);
 
             // Check to see if the adapter can create a D3D12 device without actually 
-            // creating it. The adapter with the largest dedicated video memory
-            // is favored.
+            // creating it.
             if ((dxgiAdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
                 SUCCEEDED(D3D12CreateDevice(dxgiAdapter1.Get(),
-                    D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)) &&
-                dxgiAdapterDesc1.DedicatedVideoMemory > maxDedicatedVideoMemory)
+                    D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)))
             {
-                maxDedicatedVideoMemory = dxgiAdapterDesc1.DedicatedVideoMemory;
                 ThrowIfFailed(dxgiAdapter1.As(&dxgiAdapter4));
             }
         }
@@ -143,7 +145,8 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
 
     return dxgiAdapter4;
 }
-Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
+
+Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::CreateDX12Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
 {
     ComPtr<ID3D12Device6> d3d12Device6;
     ComPtr<CD3DX12AffinityDevice> affinityDevice;
@@ -266,3 +269,16 @@ UINT Device::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) c
     return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
 }
 
+RootSignature Device::CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
+{
+    return RootSignature(shared_from_this(), rootSignatureDesc, m_RootSignatureFeatureData.HighestVersion);
+}
+
+
+Texture Device::CreateTexture(const D3D12_RESOURCE_DESC& desc,
+    const D3D12_CLEAR_VALUE* clearValue,
+    TextureUsage textureUsage,
+    const std::wstring& name)
+{
+    return Texture(shared_from_this(), desc, clearValue, textureUsage, name);
+}

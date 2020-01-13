@@ -32,7 +32,6 @@
 
 #include <Camera.h>
 #include <Game.h>
-#include <IndexBuffer.h>
 #include <Light.h>
 #include <Window.h>
 #include <Mesh.h>
@@ -96,6 +95,8 @@ protected:
     virtual void OnResize(ResizeEventArgs& e) override; 
 
 private:
+    std::shared_ptr<Device> m_Device;
+    
     // Some geometry to render.
     std::unique_ptr<Mesh> m_CubeMesh;
     std::unique_ptr<Mesh> m_SphereMesh;
@@ -115,7 +116,7 @@ private:
     RootSignature m_RootSignature;
 
     // Pipeline state object.
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> m_PipelineState;
 
     D3D12_VIEWPORT m_Viewport;
     D3D12_RECT m_ScissorRect;

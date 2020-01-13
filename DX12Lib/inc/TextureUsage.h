@@ -41,6 +41,7 @@ enum class TextureUsage
 {
     Albedo,
     Diffuse = Albedo,       // Treat Diffuse and Albedo textures the same.
+    Font,                   // Font textures usually only contains a single channel.
     Heightmap,
     Depth = Heightmap,      // Treat height and depth textures the same.
     Normalmap,

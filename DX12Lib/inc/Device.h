@@ -31,6 +31,9 @@
   */
 
 #include <DescriptorAllocation.h>
+#include <RootSignature.h>
+#include <Texture.h>
+
 #include <memory>
 #include <d3dx12affinity_d3dx12.h>
 #include <dxgi1_6.h>
@@ -52,6 +55,30 @@ public:
      */
     static std::shared_ptr<Device> CreateDevice(uint32_t nodeMask = UINT_MAX);
     
+    /**
+     * Increment the frame counter and return the previous frame count.
+     */
+    static uint64_t IncrementFrameCounter()
+    {
+        return ms_FrameCounter++;
+    }
+
+    /**
+     * Get the current frame counter value.
+     */
+    static uint64_t GetFrameCounter()
+    {
+        return ms_FrameCounter;
+    }
+
+    /**
+     * Reset the frame counter to 0.
+     */
+    static void ResetFrameCounter()
+    {
+        ms_FrameCounter = 0ull;
+    }
+
     /**
      * Get the number of GPU nodes in the SLI configuration.
      * @see https://docs.microsoft.com/en-us/windows/win32/direct3d12/multi-engine
@@ -111,31 +138,36 @@ public:
      */
     void ReleaseStaleDescriptors(uint64_t finishedFrame);
 
+    /**
+     * Gets the size of the handle increment for the given type of descriptor heap.
+     * The increment size for a descriptor handle is platform dependent and could
+     * vary per device driver.
+     */
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
     /**
-     * Increment the frame counter and return the previous frame count.
+     * Create a root signature from a root signature description.
+     *
+     * @param rootSignatureDesc Describes the layout of a root signature (version 1.1).
      */
-    static uint64_t IncrementFrameCounter()
-    {
-        return ms_FrameCounter++;
-    }
+    RootSignature CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
 
     /**
-     * Get the current frame counter value.
+     * Create a texture from a resource description.
+     *
+     * @param resourceDesc The description of the texture resource.
+     * @param clearValue Optional default clear color. When creating a resoruce
+     * with D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET or D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
+     * you should choose the value with which the clear operation will most commonly be called. 
+     * @param textureUsage How the texture is used. Depending on the texture 
+     * usage, the mipmap generation will differ.
+     * @param name A human-readable name for the texture. Useful for debugging.
      */
-    static uint64_t GetFrameCounter()
-    {
-        return ms_FrameCounter;
-    }
+    Texture CreateTexture(const D3D12_RESOURCE_DESC& desc,
+        const D3D12_CLEAR_VALUE* clearValue = nullptr,
+        TextureUsage textureUsage = TextureUsage::Albedo,
+        const std::wstring& name = L"");
 
-    /**
-     * Reset the frame counter to 0.
-     */
-    static void ResetFrameCounter()
-    {
-        ms_FrameCounter = 0ull;
-    }
 
 protected:
     explicit Device(uint32_t nodeMask);
@@ -143,12 +175,13 @@ protected:
     void Init();
 
     Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool bUseWarp);
-    Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
+    Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> CreateDX12Device(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
 
 private:
     static const uint32_t MaxNodeCount = 2;
 
     Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> m_d3d12Device;
+    D3D12_FEATURE_DATA_ROOT_SIGNATURE m_RootSignatureFeatureData;
 
     std::shared_ptr<CommandQueue> m_DirectCommandQueue;
     std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
