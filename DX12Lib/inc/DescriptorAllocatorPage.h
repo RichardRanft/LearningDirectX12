@@ -84,8 +84,6 @@ public:
     void ReleaseStaleDescriptors( uint64_t frameNumber );
 
 protected:
-    friend class DescriptorAllocator;
-
     DescriptorAllocatorPage(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
 
     // Compute the offset of the descriptor handle from the start of the heap.

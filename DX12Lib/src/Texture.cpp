@@ -2,29 +2,32 @@
 
 #include <Texture.h>
 
+#include <Device.h>
 #include <Helpers.h>
 #include <ResourceStateTracker.h>
 
-Texture::Texture( TextureUsage textureUsage, const std::wstring& name )
+Texture::Texture( const std::wstring& name )
     : Resource(name)
-    , m_TextureUsage(textureUsage)
+    , m_TextureUsage(TextureUsage::Albedo)
 {
 }
 
-Texture::Texture( const D3D12_RESOURCE_DESC& resourceDesc,
+Texture::Texture( std::shared_ptr<Device> device,
+                  const D3D12_RESOURCE_DESC& resourceDesc,
                   const D3D12_CLEAR_VALUE* clearValue, 
                   TextureUsage textureUsage,
                   const std::wstring& name )
-    : Resource(resourceDesc, clearValue, name )
+    : Resource(device, resourceDesc, clearValue, name )
     , m_TextureUsage(textureUsage)
 {
     CreateViews();
 }
 
-Texture::Texture( Microsoft::WRL::ComPtr<ID3D12Resource> resource,
+Texture::Texture( std::shared_ptr<Device> device,
+                  Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
                   TextureUsage textureUsage,
                   const std::wstring& name )
-    : Resource(resource, name)
+    : Resource(device, resource, name)
     , m_TextureUsage(textureUsage)
 {
     CreateViews();
@@ -75,7 +78,7 @@ void Texture::Resize(uint32_t width, uint32_t height, uint32_t depthOrArraySize 
         resDesc.Height = std::max( height, 1u );
         resDesc.DepthOrArraySize = depthOrArraySize;
 
-        auto device = Application::Get().GetDevice();
+        auto device = m_Device->GetD3D12Device();
 
         ThrowIfFailed( device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -150,27 +153,26 @@ void Texture::CreateViews()
 {
     if (m_d3d12Resource)
     {
-        auto& app = Application::Get();
-        auto device = app.GetDevice();
+        auto device = m_Device->GetD3D12Device();
 
         CD3DX12_RESOURCE_DESC desc(m_d3d12Resource->GetDesc());
 
         if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0 &&
             CheckRTVSupport())
         {
-            m_RenderTargetView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            m_RenderTargetView = m_Device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             device->CreateRenderTargetView(m_d3d12Resource.Get(), nullptr, m_RenderTargetView.GetDescriptorHandle());
         }
         if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 &&
             CheckDSVSupport())
         {
-            m_DepthStencilView = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+            m_DepthStencilView = m_Device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             device->CreateDepthStencilView(m_d3d12Resource.Get(), nullptr, m_DepthStencilView.GetDescriptorHandle());
         }
     }
 
-    std::lock_guard<std::mutex> lock(m_ShaderResourceViewsMutex);
-    std::lock_guard<std::mutex> guard(m_UnorderedAccessViewsMutex);
+    std::lock_guard<std::mutex> srvLock(m_ShaderResourceViewsMutex);
+    std::lock_guard<std::mutex> uavLock(m_UnorderedAccessViewsMutex);
 
     // SRVs and UAVs will be created as needed.
     m_ShaderResourceViews.clear();
@@ -179,26 +181,23 @@ void Texture::CreateViews()
 
 DescriptorAllocation Texture::CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
 {
-    auto& app = Application::Get();
-    auto device = app.GetDevice();
-    auto srv = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    auto srv = m_Device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-    device->CreateShaderResourceView(m_d3d12Resource.Get(), srvDesc, srv.GetDescriptorHandle() );
+    auto d3d12Device = m_Device->GetD3D12Device();
+    d3d12Device->CreateShaderResourceView(m_d3d12Resource.Get(), srvDesc, srv.GetDescriptorHandle());
 
     return srv;
 }
 
 DescriptorAllocation Texture::CreateUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc) const
 {
-    auto& app = Application::Get();
-    auto device = app.GetDevice();
-    auto uav = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    auto uav = m_Device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-    device->CreateUnorderedAccessView(m_d3d12Resource.Get(), nullptr, uavDesc, uav.GetDescriptorHandle());
+    auto d3d12Device = m_Device->GetD3D12Device();
+    d3d12Device->CreateUnorderedAccessView(m_d3d12Resource.Get(), nullptr, uavDesc, uav.GetDescriptorHandle());
 
     return uav;
 }
-
 
 D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
 {
@@ -208,7 +207,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetShaderResourceView(const D3D12_SHADER_RE
         hash = std::hash<D3D12_SHADER_RESOURCE_VIEW_DESC>{}(*srvDesc);
     }
 
-    std::lock_guard<std::mutex> lock(m_ShaderResourceViewsMutex);
+    std::lock_guard<std::mutex> srvLock(m_ShaderResourceViewsMutex);
 
     auto iter = m_ShaderResourceViews.find(hash);
     if (iter == m_ShaderResourceViews.end())
@@ -228,7 +227,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetUnorderedAccessView(const D3D12_UNORDERE
         hash = std::hash<D3D12_UNORDERED_ACCESS_VIEW_DESC>{}(*uavDesc);
     }
 
-    std::lock_guard<std::mutex> guard(m_UnorderedAccessViewsMutex);
+    std::lock_guard<std::mutex> uavLock(m_UnorderedAccessViewsMutex);
 
     auto iter = m_UnorderedAccessViews.find(hash);
     if (iter == m_UnorderedAccessViews.end())
@@ -309,7 +308,6 @@ bool Texture::IsBGRFormat(DXGI_FORMAT format)
     default:
         return false;
     }
-
 }
 
 bool Texture::IsDepthFormat(DXGI_FORMAT format)
@@ -325,8 +323,6 @@ bool Texture::IsDepthFormat(DXGI_FORMAT format)
         return false;
     }
 }
-
-
 
 DXGI_FORMAT Texture::GetTypelessFormat(DXGI_FORMAT format)
 {
@@ -396,6 +392,7 @@ DXGI_FORMAT Texture::GetTypelessFormat(DXGI_FORMAT format)
     case DXGI_FORMAT_R16_SNORM:
     case DXGI_FORMAT_R16_SINT:
         typelessFormat = DXGI_FORMAT_R16_TYPELESS;
+        break;
     case DXGI_FORMAT_R8_UNORM:
     case DXGI_FORMAT_R8_UINT:
     case DXGI_FORMAT_R8_SNORM:

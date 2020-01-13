@@ -83,12 +83,12 @@ void CommandQueue::Flush()
 }
 
 // This struct enables std::make_shared to protected constructor.
-struct MakeCommandList : public CommandList
+struct CommandListCtor : public CommandList
 {
 public:
     typedef CommandList super;
 
-    MakeCommandList(Device& device, D3D12_COMMAND_LIST_TYPE type)
+    CommandListCtor(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type)
     : super(device, type)
     {}
 };
@@ -105,7 +105,7 @@ std::shared_ptr<CommandList> CommandQueue::GetCommandList()
     else
     {
         // Otherwise create a new command list.
-        commandList = std::make_shared<MakeCommandList>(m_Device, m_CommandListType);
+        commandList = std::make_shared<CommandListCtor>(m_Device, m_CommandListType);
     }
 
     return commandList;
@@ -131,7 +131,7 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
     generateMipsCommandLists.reserve( commandLists.size() );
 
     // Command lists that need to be executed.
-    std::vector<ID3D12CommandList*> d3d12CommandLists;
+    std::vector<CD3DX12AffinityCommandList*> d3d12CommandLists;
     d3d12CommandLists.reserve(commandLists.size() * 2); // 2x since each command list will have a pending command list.
 
     for (auto commandList : commandLists)
@@ -173,7 +173,7 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
     // after the initial resource command lists have finished.
     if ( generateMipsCommandLists.size() > 0 )
     {
-        auto computeQueue = m_Device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE );
+        auto computeQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE );
         computeQueue->Wait( *this );
         computeQueue->ExecuteCommandLists( generateMipsCommandLists );
     }
@@ -186,7 +186,7 @@ void CommandQueue::Wait( const CommandQueue& other )
     m_d3d12CommandQueue->Wait( other.m_d3d12Fence.Get(), other.m_FenceValue );
 }
 
-Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue::GetD3D12CommandQueue() const
+Microsoft::WRL::ComPtr<CD3DX12AffinityCommandQueue> CommandQueue::GetD3D12CommandQueue() const
 {
     return m_d3d12CommandQueue;
 }

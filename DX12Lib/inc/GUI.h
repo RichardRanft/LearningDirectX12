@@ -60,12 +60,12 @@ public:
 	void SetScaling(float scale);
 
 protected:
-    GUI(Device& device);
+    GUI(std::shared_ptr<Device> device);
 
 private:
-    Device& m_Device;
+    std::shared_ptr<Device> m_Device;
     ImGuiContext* m_pImGuiCtx;
     std::unique_ptr<Texture> m_FontTexture;
     std::unique_ptr<RootSignature> m_RootSignature;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> m_PipelineState;
 };

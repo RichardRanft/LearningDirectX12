@@ -63,7 +63,7 @@ public:
 
 
 protected:
-    ConstantBuffer(Device& device, const std::wstring& name = L"");
+    ConstantBuffer(std::shared_ptr<Device> device, const std::wstring& name = L"");
 
 private:
     size_t m_SizeInBytes;

@@ -35,7 +35,7 @@ DescriptorAllocation::DescriptorAllocation( DescriptorAllocation&& allocation )
     allocation.m_DescriptorSize = 0;
 }
 
-DescriptorAllocation& DescriptorAllocation::operator=( DescriptorAllocation&& other )
+DescriptorAllocation& DescriptorAllocation::operator=( DescriptorAllocation&& other ) noexcept
 {
     // Free this descriptor if it points to anything.
     Free();
@@ -45,7 +45,7 @@ DescriptorAllocation& DescriptorAllocation::operator=( DescriptorAllocation&& ot
     m_DescriptorSize = other.m_DescriptorSize;
     m_Page = std::move( other.m_Page );
 
-    other.m_Descriptor.ptr = 0;
+    other.m_Descriptor = { 0 };
     other.m_NumHandles = 0;
     other.m_DescriptorSize = 0;
 
@@ -58,7 +58,7 @@ void DescriptorAllocation::Free()
     {
         m_Page->Free( std::move( *this ), Device::GetFrameCounter() );
         
-        m_Descriptor.ptr = 0;
+        m_Descriptor = { 0 };
         m_NumHandles = 0;
         m_DescriptorSize = 0;
         m_Page.reset();
@@ -75,7 +75,7 @@ bool DescriptorAllocation::IsNull() const
 D3D12_CPU_DESCRIPTOR_HANDLE DescriptorAllocation::GetDescriptorHandle( uint32_t offset ) const
 {
     assert( offset < m_NumHandles );
-    return { m_Descriptor.ptr + ( m_DescriptorSize * offset ) };
+    return { m_Descriptor.ptr + ( (SIZE_T)m_DescriptorSize * (SIZE_T)offset ) };
 }
 
 uint32_t DescriptorAllocation::GetNumHandles() const

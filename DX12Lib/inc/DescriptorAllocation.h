@@ -58,7 +58,7 @@ public:
 
     // Move is allowed.
     DescriptorAllocation( DescriptorAllocation&& allocation );
-    DescriptorAllocation& operator=( DescriptorAllocation&& other );
+    DescriptorAllocation& operator=( DescriptorAllocation&& other ) noexcept;
 
     // Check if this a valid descriptor.
     bool IsNull() const;

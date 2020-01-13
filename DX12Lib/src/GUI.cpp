@@ -23,6 +23,15 @@ enum RootParameters
     NumRootParameters
 };
 
+struct RootSignatureCtor : public RootSignature
+{
+    RootSignatureCtor(std::shared_ptr<Device> device,
+        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion)
+    : RootSignature(device, rootSignatureDesc, rootSignatureVersion)
+    {}
+};
+
 //--------------------------------------------------------------------------------------
 // Get surface information for a particular format
 //--------------------------------------------------------------------------------------
@@ -34,7 +43,7 @@ void GetSurfaceInfo(
     _Out_opt_ size_t* outRowBytes,
     _Out_opt_ size_t* outNumRows );
 
-GUI::GUI(Device& device)
+GUI::GUI(std::shared_ptr<Device> device)
     : m_Device(device)
     , m_pImGuiCtx( nullptr )
 {}
@@ -64,8 +73,8 @@ bool GUI::Initialize( HWND window )
     int width, height;
     io.Fonts->GetTexDataAsRGBA32( &pixelData, &width, &height );
 
-    auto device = m_Device.GetD3D12Device();
-    auto commandQueue = m_Device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
+    auto device = m_Device->GetD3D12Device();
+    auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
     auto fontTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R8G8B8A8_UNORM, width, height );
@@ -113,7 +122,7 @@ bool GUI::Initialize( HWND window )
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1( RootParameters::NumRootParameters, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags );
 
-    m_RootSignature = std::make_unique<RootSignature>( rootSignatureDescription.Desc_1_1, featureData.HighestVersion );
+    m_RootSignature = std::make_unique<RootSignatureCtor>( m_Device, rootSignatureDescription.Desc_1_1, featureData.HighestVersion );
 
     const D3D12_INPUT_ELEMENT_DESC inputLayout[] =
     {
@@ -121,10 +130,6 @@ bool GUI::Initialize( HWND window )
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, offsetof( ImDrawVert, uv ),  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
         { "COLOR",    0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, offsetof( ImDrawVert, col ), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
-
-    D3D12_RT_FORMAT_ARRAY rtvFormats = {};
-    rtvFormats.NumRenderTargets = 1;
-    rtvFormats.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 
     D3D12_BLEND_DESC blendDesc = {};
     blendDesc.RenderTarget[0].BlendEnable = true;
@@ -154,35 +159,21 @@ bool GUI::Initialize( HWND window )
     depthStencilDesc.StencilEnable = false;
 
     // Setup the pipeline state.
-    struct PipelineStateStream
-    {
-        CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
-        CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-        CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-        CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-        CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
-        CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BlendDesc;
-        CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RasterizerState;
-        CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DepthStencilState;
-    } pipelineStateStream;
+    D3DX12_AFFINITY_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc = {};
 
-    pipelineStateStream.pRootSignature = m_RootSignature->GetRootSignature().Get();
-    pipelineStateStream.InputLayout = { inputLayout, 3 };
-    pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipelineStateStream.VS = { g_ImGUI_VS, sizeof( g_ImGUI_VS ) };
-    pipelineStateStream.PS = { g_ImGUI_PS, sizeof( g_ImGUI_PS ) };
-    pipelineStateStream.RTVFormats = rtvFormats;
-    pipelineStateStream.SampleDesc = { 1, 0 };
-    pipelineStateStream.BlendDesc = CD3DX12_BLEND_DESC( blendDesc );
-    pipelineStateStream.RasterizerState = CD3DX12_RASTERIZER_DESC( rasterizerDesc );
-    pipelineStateStream.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( depthStencilDesc );
+    graphicsPipelineStateDesc.pRootSignature = m_RootSignature->GetRootSignature().Get();
+    graphicsPipelineStateDesc.InputLayout = { inputLayout, 3 };
+    graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    graphicsPipelineStateDesc.VS = { g_ImGUI_VS, sizeof( g_ImGUI_VS ) };
+    graphicsPipelineStateDesc.PS = { g_ImGUI_PS, sizeof( g_ImGUI_PS ) };
+    graphicsPipelineStateDesc.NumRenderTargets = 1;
+    graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    graphicsPipelineStateDesc.SampleDesc = { 1, 0 };
+    graphicsPipelineStateDesc.BlendState = blendDesc;
+    graphicsPipelineStateDesc.RasterizerState = CD3DX12_RASTERIZER_DESC( rasterizerDesc );
+    graphicsPipelineStateDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( depthStencilDesc );
     
-    D3D12_PIPELINE_STATE_STREAM_DESC pipelineStateStreamDesc = {
-        sizeof( PipelineStateStream ), &pipelineStateStream
-    };
-    ThrowIfFailed( device->CreatePipelineState( &pipelineStateStreamDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
+    ThrowIfFailed( device->CreateGraphicsPipelineState( &graphicsPipelineStateDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
 
     return true;
 }

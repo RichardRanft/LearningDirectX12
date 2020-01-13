@@ -67,7 +67,7 @@ public:
         return m_RootSignature;
     }
 
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> GetPipelineState() const
+    Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> GetPipelineState() const
     {
         return m_PipelineState;
     }
@@ -83,7 +83,7 @@ protected:
 private:
     RootSignature m_RootSignature;
     std::shared_ptr<Device> m_Device;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
+    Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> m_PipelineState;
     // Default (no resource) UAV's to pad the unused UAV descriptors.
     // If generating less than 4 mip map levels, the unused mip maps
     // need to be padded with default UAVs (to keep the DX12 runtime happy).

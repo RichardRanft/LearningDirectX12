@@ -43,15 +43,7 @@
 class Texture : public Resource
 {
 public:
-    explicit Texture(TextureUsage textureUsage = TextureUsage::Albedo, 
-                      const std::wstring& name = L"" );
-    explicit Texture( const D3D12_RESOURCE_DESC& resourceDesc, 
-                      const D3D12_CLEAR_VALUE* clearValue = nullptr,
-                      TextureUsage textureUsage = TextureUsage::Albedo,
-                      const std::wstring& name = L"" );
-    explicit Texture( Microsoft::WRL::ComPtr<ID3D12Resource> resource,
-                      TextureUsage textureUsage = TextureUsage::Albedo,
-                      const std::wstring& name = L"");
+    explicit Texture(const std::wstring& name = L"");
 
     Texture(const Texture& copy);
     Texture( Texture&& copy );
@@ -135,6 +127,13 @@ public:
     static DXGI_FORMAT GetUAVCompatableFormat(DXGI_FORMAT format);
 
 protected:
+    explicit Texture(std::shared_ptr<Device> device, const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_CLEAR_VALUE* clearValue = nullptr,
+        TextureUsage textureUsage = TextureUsage::Albedo,
+        const std::wstring& name = L"");
+    explicit Texture(std::shared_ptr<Device> device, Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
+        TextureUsage textureUsage = TextureUsage::Albedo,
+        const std::wstring& name = L"");
 
 private:
     DescriptorAllocation CreateShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const;

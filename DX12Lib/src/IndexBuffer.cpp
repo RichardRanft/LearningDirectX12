@@ -6,7 +6,14 @@
 
 #include <cassert>
 
-IndexBuffer::IndexBuffer(Device& device, const std::wstring& name)
+IndexBuffer::IndexBuffer()
+    : Buffer()
+    , m_NumIndicies(0)
+    , m_IndexFormat(DXGI_FORMAT_UNKNOWN)
+    , m_IndexBufferView({})
+{}
+
+IndexBuffer::IndexBuffer(std::shared_ptr<Device> device, const std::wstring& name)
     : Buffer(device, name)
     , m_NumIndicies(0)
     , m_IndexFormat(DXGI_FORMAT_UNKNOWN)

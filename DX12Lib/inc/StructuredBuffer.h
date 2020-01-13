@@ -38,6 +38,12 @@
 class StructuredBuffer : public Buffer
 {
 public:
+    StructuredBuffer();
+    StructuredBuffer(const StructuredBuffer& copy) = default;
+    StructuredBuffer(StructuredBuffer&& copy) = default;
+
+    StructuredBuffer& operator=(const StructuredBuffer& copy) = default;
+    StructuredBuffer& operator=(StructuredBuffer&& copy) = default;
 
     /**
     * Get the number of elements contained in this buffer.
@@ -78,16 +84,14 @@ public:
         return m_UAV.GetDescriptorHandle();
     }
 
-    const ByteAddressBuffer& GetCounterBuffer() const
+    const std::shared_ptr<ByteAddressBuffer> GetCounterBuffer() const
     {
         return m_CounterBuffer;
     }
 
 protected:
-    friend class Device;
-
-    StructuredBuffer(Device& device, const std::wstring& name = L"");
-    StructuredBuffer(Device& device, const D3D12_RESOURCE_DESC& resDesc,
+    StructuredBuffer(std::shared_ptr<Device> device, const std::wstring& name = L"");
+    StructuredBuffer(std::shared_ptr<Device> device, const D3D12_RESOURCE_DESC& desc,
         size_t numElements, size_t elementSize,
         const std::wstring& name = L"");
 
@@ -99,5 +103,5 @@ private:
     DescriptorAllocation m_UAV;
 
     // A buffer to store the internal counter for the structured buffer.
-    ByteAddressBuffer m_CounterBuffer;
+    std::shared_ptr<ByteAddressBuffer> m_CounterBuffer;
 };

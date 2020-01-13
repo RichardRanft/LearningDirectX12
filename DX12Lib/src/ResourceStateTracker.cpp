@@ -16,11 +16,11 @@ ResourceStateTracker::ResourceStateTracker()
 ResourceStateTracker::~ResourceStateTracker()
 {}
 
-void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& barrier)
+void ResourceStateTracker::ResourceBarrier(const D3DX12_AFFINITY_RESOURCE_BARRIER& barrier)
 {
     if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
     {
-        const D3D12_RESOURCE_TRANSITION_BARRIER& transitionBarrier = barrier.Transition;
+        const D3DX12_AFFINITY_RESOURCE_TRANSITION_BARRIER& transitionBarrier = barrier.Transition;
 
         // First check if there is already a known "final" state for the given resource.
         // If there is, the resource has been used on the command list before and
@@ -38,7 +38,7 @@ void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& barrier
                 {
                     if ( transitionBarrier.StateAfter != subresourceState.second )
                     {
-                        D3D12_RESOURCE_BARRIER newBarrier = barrier;
+                        D3DX12_AFFINITY_RESOURCE_BARRIER newBarrier = barrier;
                         newBarrier.Transition.Subresource = subresourceState.first;
                         newBarrier.Transition.StateBefore = subresourceState.second;
                         m_ResourceBarriers.push_back( newBarrier );
@@ -51,7 +51,7 @@ void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& barrier
                 if ( transitionBarrier.StateAfter != finalState )
                 {
                     // Push a new transition barrier with the correct before state.
-                    D3D12_RESOURCE_BARRIER newBarrier = barrier;
+                    D3DX12_AFFINITY_RESOURCE_BARRIER newBarrier = barrier;
                     newBarrier.Transition.StateBefore = finalState;
                     m_ResourceBarriers.push_back( newBarrier );
                 }
@@ -74,11 +74,11 @@ void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& barrier
     }
 }
 
-void ResourceStateTracker::TransitionResource( ID3D12Resource* resource, D3D12_RESOURCE_STATES stateAfter, UINT subResource )
+void ResourceStateTracker::TransitionResource(CD3DX12AffinityResource* resource, D3D12_RESOURCE_STATES stateAfter, UINT subResource)
 {
     if ( resource )
     {
-        ResourceBarrier( CD3DX12_RESOURCE_BARRIER::Transition( resource, D3D12_RESOURCE_STATE_COMMON, stateAfter, subResource ) );
+        ResourceBarrier(CD3DX12_AFFINITY_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_COMMON, stateAfter, subResource));
     }
 }
 
@@ -89,17 +89,17 @@ void ResourceStateTracker::TransitionResource( const Resource& resource, D3D12_R
 
 void ResourceStateTracker::UAVBarrier(const Resource* resource )
 {
-    ID3D12Resource* pResource = resource != nullptr ? resource->GetD3D12Resource().Get() : nullptr;
+    CD3DX12AffinityResource* pResource = resource != nullptr ? resource->GetD3D12Resource().Get() : nullptr;
 
-    ResourceBarrier(CD3DX12_RESOURCE_BARRIER::UAV(pResource));
+    ResourceBarrier(CD3DX12_AFFINITY_RESOURCE_BARRIER::UAV(pResource));
 }
 
 void ResourceStateTracker::AliasBarrier(const Resource* resourceBefore, const Resource* resourceAfter)
 {
-    ID3D12Resource* pResourceBefore = resourceBefore != nullptr ? resourceBefore->GetD3D12Resource().Get() : nullptr;
-    ID3D12Resource* pResourceAfter = resourceAfter != nullptr ? resourceAfter->GetD3D12Resource().Get() : nullptr;
+    CD3DX12AffinityResource* pResourceBefore = resourceBefore != nullptr ? resourceBefore->GetD3D12Resource().Get() : nullptr;
+    CD3DX12AffinityResource* pResourceAfter = resourceAfter != nullptr ? resourceAfter->GetD3D12Resource().Get() : nullptr;
 
-    ResourceBarrier(CD3DX12_RESOURCE_BARRIER::Aliasing(pResourceBefore, pResourceAfter));
+    ResourceBarrier(CD3DX12_AFFINITY_RESOURCE_BARRIER::Aliasing(pResourceBefore, pResourceAfter));
 }
 
 void ResourceStateTracker::FlushResourceBarriers(CommandList& commandList)
@@ -144,7 +144,7 @@ uint32_t ResourceStateTracker::FlushPendingResourceBarriers(CommandList& command
                     {
                         if ( pendingTransition.StateAfter != subresourceState.second )
                         {
-                            D3D12_RESOURCE_BARRIER newBarrier = pendingBarrier;
+                            D3DX12_AFFINITY_RESOURCE_BARRIER newBarrier = pendingBarrier;
                             newBarrier.Transition.Subresource = subresourceState.first;
                             newBarrier.Transition.StateBefore = subresourceState.second;
                             resourceBarriers.push_back( newBarrier );
@@ -211,7 +211,7 @@ void ResourceStateTracker::Unlock()
     ms_IsLocked = false;
 }
 
-void ResourceStateTracker::AddGlobalResourceState(ID3D12Resource* resource, D3D12_RESOURCE_STATES state)
+void ResourceStateTracker::AddGlobalResourceState(CD3DX12AffinityResource* resource, D3D12_RESOURCE_STATES state)
 {
     if ( resource != nullptr )
     {
@@ -220,7 +220,7 @@ void ResourceStateTracker::AddGlobalResourceState(ID3D12Resource* resource, D3D1
     }
 }
 
-void ResourceStateTracker::RemoveGlobalResourceState(ID3D12Resource* resource)
+void ResourceStateTracker::RemoveGlobalResourceState(CD3DX12AffinityResource* resource)
 {
     if ( resource != nullptr )
     {
