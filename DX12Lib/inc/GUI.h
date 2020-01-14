@@ -68,6 +68,7 @@ public:
 	void SetScaling(float scale);
 
 protected:
+    friend class Device;
     GUI(std::shared_ptr<Device> device);
 
 private:

@@ -32,6 +32,7 @@
 
 #include <Camera.h>
 #include <Game.h>
+#include <GUI.h>
 #include <Light.h>
 #include <Window.h>
 #include <Mesh.h>
@@ -98,6 +99,8 @@ protected:
 private:
     std::shared_ptr<Device> m_Device;
     SwapChain m_SwapChain;
+
+    GUI m_GUI;
 
     // Some geometry to render.
     std::unique_ptr<Mesh> m_CubeMesh;

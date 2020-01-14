@@ -274,6 +274,14 @@ SwapChain Device::CreateSwapChain(HWND hWnd)
     return SwapChain(shared_from_this(), hWnd);
 }
 
+GUI Device::CreateGUI(HWND hWnd)
+{
+    GUI gui(shared_from_this());
+    gui.Initialize(hWnd);
+
+    return gui;
+}
+
 RootSignature Device::CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
 {
     return RootSignature(shared_from_this(), rootSignatureDesc, m_RootSignatureFeatureData.HighestVersion);

@@ -5,7 +5,6 @@
 #include <CommandList.h>
 #include <Device.h>
 #include <Helpers.h>
-#include <GUI.h>
 #include <Light.h>
 #include <Material.h>
 #include <Window.h>
@@ -121,7 +120,9 @@ Tutorial3::~Tutorial3()
 
 bool Tutorial3::LoadContent()
 {
-    m_SwapChain = m_Device->CreateSwapChain(m_pWindow->GetWindowHandle());
+    HWND hWnd = m_pWindow->GetWindowHandle();
+    m_SwapChain = m_Device->CreateSwapChain(hWnd);
+    m_GUI = m_Device->CreateGUI(hWnd);
 
     auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();

@@ -31,6 +31,7 @@
   */
 
 #include <DescriptorAllocation.h>
+#include <GUI.h>
 #include <RootSignature.h>
 #include <SwapChain.h>
 #include <Texture.h>
@@ -152,6 +153,13 @@ public:
      * @param hWnd The handle to the window to create the swapchain for.
      */
      SwapChain CreateSwapChain(HWND hWnd);
+
+     /**
+      * Create a GUI context.
+      *
+      * @param hWnd The handle to the window to create the GUI for.
+      */
+     GUI CreateGUI(HWND hWnd);
 
     /**
      * Create a root signature from a root signature description.

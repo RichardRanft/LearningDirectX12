@@ -40,7 +40,7 @@ Texture::Texture(const Texture& copy)
 }
 
 Texture::Texture(Texture&& copy)
-    : Resource(copy)
+    : Resource(std::move(copy))
 {
     CreateViews();
 }

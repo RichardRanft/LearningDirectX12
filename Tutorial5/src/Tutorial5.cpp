@@ -48,7 +48,7 @@ XMMATRIX XM_CALLCONV LookAtMatrix(FXMVECTOR Position, FXMVECTOR Direction, FXMVE
 }
 
 Tutorial5::Tutorial5(const std::wstring& name, int width, int height, bool vSync)
-    : super(name, width, height, vSync)
+    : super(name, width, height)
     , m_Forward(0)
     , m_Backward(0)
     , m_Left(0)
