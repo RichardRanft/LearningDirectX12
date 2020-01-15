@@ -53,6 +53,11 @@ public:
     virtual ~Tutorial3();
 
     /**
+     *  Initialize the DirectX Runtime.
+     */
+    virtual bool Initialize();
+
+    /**
      *  Load content required for the demo.
      */
     virtual bool LoadContent() override;
@@ -61,6 +66,12 @@ public:
      *  Unload demo specific content that was loaded in LoadContent.
      */
     virtual void UnloadContent() override;
+
+    /**
+     * Destroy any resource that are used by the game.
+     */
+    virtual void Destroy();
+
 protected:
     /**
      *  Update the game logic.

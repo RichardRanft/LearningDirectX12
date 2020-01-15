@@ -55,6 +55,11 @@ public:
     SwapChain& operator=(SwapChain&& copy) = default;
 
     /**
+     * Resize the swapchain's backbuffers.
+     */
+     void Resize(uint32_t width, uint32_t height);
+
+    /**
      * Get the render target of the window. This method should be called every
      * frame since the color attachment point changes depending on the window's
      * current back buffer.

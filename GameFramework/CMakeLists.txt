@@ -33,6 +33,11 @@ add_library( GameFramework STATIC
     ${RESOURCE_FILES}
 )
 
+target_compile_definitions( GameFramework
+    # Remove superflurious headers and remove min/max macros from windows.h.
+    PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX
+)
+
 target_include_directories( GameFramework
     PUBLIC inc
 )

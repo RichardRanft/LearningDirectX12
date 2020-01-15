@@ -47,6 +47,7 @@ class DescriptorAllocator;
 class Device : public std::enable_shared_from_this<Device>
 {
 public:
+    virtual ~Device();
     /**
      * Create the Graphics device object.
      * The returned device is used to create all device-dependent resources.

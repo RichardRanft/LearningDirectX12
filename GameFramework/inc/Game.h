@@ -32,6 +32,9 @@
 
 #include <Events.h>
 
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #include <memory>
 #include <string>
 
@@ -56,6 +59,8 @@ public:
         return m_Height;
     }
 
+    HWND GetWindowHandle() const;
+
     /**
      *  Initialize the DirectX Runtime.
      */
@@ -75,6 +80,21 @@ public:
      * Destroy any resource that are used by the game.
      */
     virtual void Destroy();
+
+    /**
+     * Show the game window.
+     */
+    void Show();
+
+    /**
+     * Hide the game window.
+     */
+    void Hide();
+
+    /**
+     * Toggle fullscreen window.
+     */
+    void ToggleFullscreen();
 
 protected:
     friend class Window;
@@ -135,10 +155,9 @@ protected:
      */
     virtual void OnWindowDestroy();
 
-    std::shared_ptr<Window> m_pWindow;
-
 private:
     std::wstring m_Name;
     int m_Width;
     int m_Height;
+    std::shared_ptr<Window> m_pWindow;
 };

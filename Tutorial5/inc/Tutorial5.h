@@ -41,8 +41,10 @@ class Tutorial5 : public Game
 public:
     using super = Game;
 
-    Tutorial5(const std::wstring& name, int width, int height, bool vSync = false);
+    Tutorial5(const std::wstring& name, int width, int height);
     virtual ~Tutorial5();
+
+    virtual bool Initialize() override;
 
     /**
      *  Load content required for the demo.

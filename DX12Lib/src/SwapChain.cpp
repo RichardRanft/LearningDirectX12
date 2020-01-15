@@ -119,6 +119,37 @@ void SwapChain::UpdateRenderTargetViews()
     }
 }
 
+void SwapChain::Resize(uint32_t width, uint32_t height)
+{
+    width = std::max(1u, width);
+    height = std::max(1u, height);
+
+    DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+    ThrowIfFailed(m_dxgiSwapChain->GetDesc(&swapChainDesc));
+    
+    // Update the client size.
+    if (swapChainDesc.BufferDesc.Width != width || swapChainDesc.BufferDesc.Height != height)
+    {
+        m_Device->Flush();
+
+        // Release all references to back buffer textures.
+        m_RenderTarget.AttachTexture(Color0, Texture());
+        for (int i = 0; i < m_BufferCount; ++i)
+        {
+            ResourceStateTracker::RemoveGlobalResourceState(m_BackBufferTextures[i].GetD3D12Resource().Get());
+            m_BackBufferTextures[i].Reset();
+        }
+
+        ThrowIfFailed(m_dxgiSwapChain->ResizeBuffers(m_BufferCount, width,
+            height, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+        m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
+
+        UpdateRenderTargetViews();
+    }
+}
+
+
 const RenderTarget& SwapChain::GetRenderTarget() const
 {
     m_RenderTarget.AttachTexture(AttachmentPoint::Color0, m_BackBufferTextures[m_CurrentBackBufferIndex]);

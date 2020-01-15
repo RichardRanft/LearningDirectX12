@@ -47,7 +47,7 @@ XMMATRIX XM_CALLCONV LookAtMatrix(FXMVECTOR Position, FXMVECTOR Direction, FXMVE
     return M;
 }
 
-Tutorial5::Tutorial5(const std::wstring& name, int width, int height, bool vSync)
+Tutorial5::Tutorial5(const std::wstring& name, int width, int height)
     : super(name, width, height)
     , m_Forward(0)
     , m_Backward(0)
@@ -83,8 +83,18 @@ Tutorial5::~Tutorial5()
     _aligned_free(m_pAlignedCameraData);
 }
 
+bool Tutorial5::Initialize()
+{
+    bool success = super::Initialize();
+
+    Show();
+
+    return success;
+}
+
 bool Tutorial5::LoadContent()
 {
+    super::LoadContent();
 
     return true;
 }
@@ -326,7 +336,7 @@ void Tutorial5::OnKeyPressed(KeyEventArgs& e)
         case KeyCode::F11:
             if (g_AllowFullscreenToggle)
             {
-                m_pWindow->ToggleFullscreen();
+                ToggleFullscreen();
                 g_AllowFullscreenToggle = false;
             }
             break;

@@ -86,6 +86,7 @@ Tutorial3::Tutorial3(const std::wstring& name, int width, int height)
     : super(name, width, height)
     , m_ScissorRect( CD3DX12_RECT( 0, 0, LONG_MAX, LONG_MAX ) )
     , m_Viewport( CD3DX12_VIEWPORT( 0.0f, 0.0f, static_cast<float>( width ), static_cast<float>( height ) ) )
+    , m_pAlignedCameraData(nullptr)
     , m_Forward( 0 )
     , m_Backward( 0 )
     , m_Left( 0 )
@@ -99,31 +100,52 @@ Tutorial3::Tutorial3(const std::wstring& name, int width, int height)
     , m_Width( 0 )
     , m_Height( 0 )
 {
-    m_Device = Device::CreateDevice();
-
-    XMVECTOR cameraPos = XMVectorSet( 0, 5, -20, 1 );
-    XMVECTOR cameraTarget = XMVectorSet( 0, 5, 0, 1 );
-    XMVECTOR cameraUp = XMVectorSet( 0, 1, 0, 0 );
-
-    m_Camera.set_LookAt( cameraPos, cameraTarget, cameraUp );
-
-    m_pAlignedCameraData = (CameraData*)_aligned_malloc( sizeof( CameraData ), 16 );
-    
-    m_pAlignedCameraData->m_InitialCamPos = m_Camera.get_Translation();
-    m_pAlignedCameraData->m_InitialCamRot = m_Camera.get_Rotation();
 }
 
 Tutorial3::~Tutorial3()
 {
-    _aligned_free( m_pAlignedCameraData );
+    Destroy();
+}
+
+void Tutorial3::Destroy()
+{
+    if ( m_pAlignedCameraData )
+    {
+        _aligned_free(m_pAlignedCameraData);
+        m_pAlignedCameraData = nullptr;
+    }
+}
+
+bool Tutorial3::Initialize()
+{
+    bool success = super::Initialize();
+
+    if (success)
+    {
+        HWND hWnd = GetWindowHandle();
+        m_Device = Device::CreateDevice();
+        m_SwapChain = m_Device->CreateSwapChain(hWnd);
+        m_GUI = m_Device->CreateGUI(hWnd);
+
+        XMVECTOR cameraPos = XMVectorSet(0, 5, -20, 1);
+        XMVECTOR cameraTarget = XMVectorSet(0, 5, 0, 1);
+        XMVECTOR cameraUp = XMVectorSet(0, 1, 0, 0);
+
+        m_Camera.set_LookAt(cameraPos, cameraTarget, cameraUp);
+
+        m_pAlignedCameraData = (CameraData*)_aligned_malloc(sizeof(CameraData), 16);
+
+        m_pAlignedCameraData->m_InitialCamPos = m_Camera.get_Translation();
+        m_pAlignedCameraData->m_InitialCamRot = m_Camera.get_Rotation();
+
+        Show();
+    }
+
+    return success;
 }
 
 bool Tutorial3::LoadContent()
 {
-    HWND hWnd = m_pWindow->GetWindowHandle();
-    m_SwapChain = m_Device->CreateSwapChain(hWnd);
-    m_GUI = m_Device->CreateGUI(hWnd);
-
     auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
@@ -257,6 +279,7 @@ void Tutorial3::OnResize( ResizeEventArgs& e )
             static_cast<float>(m_Width), static_cast<float>(m_Height));
 
         m_RenderTarget.Resize( m_Width, m_Height );
+        m_SwapChain.Resize(m_Width, m_Height);
     }
 }
 
@@ -593,7 +616,7 @@ void Tutorial3::OnKeyPressed( KeyEventArgs& e )
             case KeyCode::F11:
                 if ( g_AllowFullscreenToggle )
                 {
-                    m_pWindow->ToggleFullscreen();
+                    ToggleFullscreen();
                     g_AllowFullscreenToggle = false;
                 }
                 break;
