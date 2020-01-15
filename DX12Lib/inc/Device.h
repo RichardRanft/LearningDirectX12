@@ -44,10 +44,9 @@
 class CommandQueue;
 class DescriptorAllocator;
 
-class Device : public std::enable_shared_from_this<Device>
+class Device
 {
 public:
-    virtual ~Device();
     /**
      * Create the Graphics device object.
      * The returned device is used to create all device-dependent resources.
@@ -56,7 +55,17 @@ public:
      * The parameter is a bit pattern which represents the nodes to use. By default, all nodes
      * are active.
      */
-    static std::shared_ptr<Device> CreateDevice(uint32_t nodeMask = UINT_MAX);
+    static Device& CreateDevice(uint32_t nodeMask = UINT_MAX);
+
+    /**
+     * Destroy the device instance.
+     */
+     static void DestroyDevice();
+
+    /**
+     * Get the previously created device instance.
+     */
+     static Device& Get();
     
     /**
      * Increment the frame counter and return the previous frame count.

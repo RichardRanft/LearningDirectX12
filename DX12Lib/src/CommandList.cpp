@@ -22,52 +22,22 @@
 std::map<std::wstring, CD3DX12AffinityResource* > CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
 
-struct DynamicDescriptorHeapCtor : public DynamicDescriptorHeap
+CommandList::CommandList(D3D12_COMMAND_LIST_TYPE type)
+    : m_d3d12CommandListType( type )
 {
-    DynamicDescriptorHeapCtor(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256)
-    : DynamicDescriptorHeap(device, type, numDescriptorsPerHeap)
-    {}
-};
-
-struct GenerateMipsPSOCtor : public GenerateMipsPSO
-{
-    GenerateMipsPSOCtor(std::shared_ptr<Device> device)
-    : GenerateMipsPSO(device)
-    {}
-};
-
-struct PanoToCubemapPSOCtor : public PanoToCubemapPSO
-{
-    PanoToCubemapPSOCtor(std::shared_ptr<Device> device)
-    : PanoToCubemapPSO(device)
-    {}
-};
-
-struct UploadBufferCtor : public UploadBuffer
-{
-    UploadBufferCtor(std::shared_ptr<Device> device, size_t pageSize = _2MB)
-    : UploadBuffer(device, pageSize)
-    {}
-};
-
-CommandList::CommandList(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type)
-    : m_Device(device)
-    , m_d3d12CommandListType( type )
-{
-    auto d3d12Device = m_Device->GetD3D12Device();
+    auto d3d12Device = Device::Get().GetD3D12Device();
 
     ThrowIfFailed(d3d12Device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
-
     ThrowIfFailed(d3d12Device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(),
                                               nullptr, IID_PPV_ARGS( &m_d3d12CommandList ) ) );
 
-    m_UploadBuffer = std::make_unique<UploadBufferCtor>(m_Device);
+    m_UploadBuffer = std::make_unique<UploadBuffer>();
 
     m_ResourceStateTracker = std::make_unique<ResourceStateTracker>();
 
     for ( int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i )
     {
-        m_DynamicDescriptorHeap[i] = std::make_unique<DynamicDescriptorHeapCtor>( m_Device, static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>( i ) );
+        m_DynamicDescriptorHeap[i] = std::make_unique<DynamicDescriptorHeap>( static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>( i ) );
         m_DescriptorHeaps[i] = nullptr;
     }
 }

@@ -7,30 +7,7 @@
 
 std::atomic_uint64_t Device::ms_FrameCounter = 0ull;
 
-// Allow std::make_shared access to constructor.
-struct DeviceCtor : public Device {
-    DeviceCtor(uint32_t nodeMask)
-        : Device(nodeMask)
-    {}
-};
-
-// Allow std::make_shared access to constructor.
-struct DescriptorAllocatorCtor : public DescriptorAllocator
-{
-    DescriptorAllocatorCtor(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptorsPerHeap = 256)
-        : DescriptorAllocator(device, type, numDescriptorsPerHeap)
-    {}
-};
-
-// Allow std::make_shared access to constructor.
-struct CommandQueueCtor : public CommandQueue
-{
-    CommandQueueCtor(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type)
-        : CommandQueue(device, type)
-    {}
-};
-
-
+static Device* gs_pDevice = nullptr;
 
 Device::Device(uint32_t nodeMask)
     : m_NodeCount(0)
@@ -88,23 +65,37 @@ Device::Device(uint32_t nodeMask)
 
 void Device::Init()
 {
-    m_DirectCommandQueue = std::make_shared<CommandQueueCtor>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_DIRECT);
-    m_ComputeCommandQueue = std::make_shared<CommandQueueCtor>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
-    m_CopyCommandQueue = std::make_shared<CommandQueueCtor>(shared_from_this(), D3D12_COMMAND_LIST_TYPE_COPY);
+    m_DirectCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    m_ComputeCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+    m_CopyCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COPY);
 
     // Create descriptor allocators
     for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
     {
-        m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocatorCtor>(shared_from_this(), static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+        m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
     }
 }
 
-std::shared_ptr<Device> Device::CreateDevice(uint32_t nodeMask)
+Device& Device::CreateDevice(uint32_t nodeMask)
 {
-    std::shared_ptr<Device> device = std::make_shared<DeviceCtor>(nodeMask);
-    device->Init();
+    if ( !gs_pDevice ) gs_pDevice = new Device(nodeMask);
+    return *gs_pDevice;
+}
 
-    return device;
+void Device::DestroyDevice()
+{
+    if (gs_pDevice)
+    {
+        gs_pDevice->Flush();
+        delete gs_pDevice;
+        gs_pDevice = nullptr;
+    }
+}
+
+Device& Device::Get()
+{
+    assert(gs_pDevice);
+    return *gs_pDevice;
 }
 
 Microsoft::WRL::ComPtr<IDXGIAdapter4> Device::GetAdapter(bool bUseWarp)
@@ -271,13 +262,12 @@ UINT Device::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) c
 
 SwapChain Device::CreateSwapChain(HWND hWnd)
 {
-    return SwapChain(shared_from_this(), hWnd);
+    return SwapChain(hWnd);
 }
 
 GUI Device::CreateGUI(HWND hWnd)
 {
-    GUI gui(shared_from_this());
-    gui.Initialize(hWnd);
+    GUI gui(hWnd);
 
     return gui;
 }

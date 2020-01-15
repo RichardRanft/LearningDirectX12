@@ -44,7 +44,6 @@
 class Buffer;
 class ByteAddressBuffer;
 class ConstantBuffer;
-class Device;
 class DynamicDescriptorHeap;
 class GenerateMipsPSO;
 class IndexBuffer;
@@ -398,7 +397,8 @@ public:
     }
 
 protected:
-    CommandList(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type);
+    friend class CommandQueue;
+    CommandList(D3D12_COMMAND_LIST_TYPE type);
 
 private:
     void TrackResource(Microsoft::WRL::ComPtr<CD3DX12AffinityObject> object);
@@ -414,8 +414,6 @@ private:
     void BindDescriptorHeaps();
 
     using TrackedObjects = std::vector < Microsoft::WRL::ComPtr<CD3DX12AffinityObject> >;
-
-    std::shared_ptr<Device> m_Device;
 
     D3D12_COMMAND_LIST_TYPE m_d3d12CommandListType;
     Microsoft::WRL::ComPtr<CD3DX12AffinityGraphicsCommandList> m_d3d12CommandList;

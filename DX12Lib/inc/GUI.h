@@ -72,7 +72,6 @@ protected:
     GUI(std::shared_ptr<Device> device);
 
 private:
-    std::shared_ptr<Device> m_Device;
     HWND m_hWnd;
     ImGuiContext* m_pImGuiCtx;
     Texture m_FontTexture;

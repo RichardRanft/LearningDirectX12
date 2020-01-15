@@ -34,7 +34,7 @@
  *  https://github.com/Microsoft/DirectX-Graphics-Samples
  */
 
-#include "d3dx12.h"
+#include <d3dx12affinity_d3dx12.h>
 
 #include <wrl.h>
 
@@ -49,6 +49,8 @@ class RootSignature;
 class DynamicDescriptorHeap
 {
 public:
+    DynamicDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, 
+        uint32_t numDescriptorsPerHeap = 1024);
 
     virtual ~DynamicDescriptorHeap();
 
@@ -105,10 +107,6 @@ public:
     void Reset();
 
 protected:
-    DynamicDescriptorHeap(
-        std::shared_ptr<Device> device,
-        D3D12_DESCRIPTOR_HEAP_TYPE heapType,
-        uint32_t numDescriptorsPerHeap = 1024 );
 
     void CommitStagedDescriptors(CommandList& commandList, std::function<void(CD3DX12AffinityGraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc);
 
@@ -183,7 +181,6 @@ private:
 
     using DescriptorHeapPool = std::queue< Microsoft::WRL::ComPtr<CD3DX12AffinityDescriptorHeap> >;
 
-    std::shared_ptr<Device> m_Device;
     DescriptorHeapPool m_DescriptorHeapPool;
     DescriptorHeapPool m_AvailableDescriptorHeaps;
 

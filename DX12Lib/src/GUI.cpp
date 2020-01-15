@@ -23,15 +23,6 @@ enum RootParameters
     NumRootParameters
 };
 
-struct RootSignatureCtor : public RootSignature
-{
-    RootSignatureCtor(std::shared_ptr<Device> device,
-        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion)
-    : RootSignature(device, rootSignatureDesc, rootSignatureVersion)
-    {}
-};
-
 //--------------------------------------------------------------------------------------
 // Get surface information for a particular format
 //--------------------------------------------------------------------------------------
@@ -44,25 +35,17 @@ void GetSurfaceInfo(
     _Out_opt_ size_t* outNumRows );
 
 GUI::GUI()
-: m_Device(nullptr)
-, m_hWnd(0)
-, m_pImGuiCtx(nullptr)
-, m_PipelineState(nullptr)
-{}
-
-GUI::GUI(std::shared_ptr<Device> device)
-    : m_Device(device)
-    , m_hWnd(0)
+    : m_hWnd(NULL)
     , m_pImGuiCtx(nullptr)
+    , m_PipelineState(nullptr)
 {}
 
 GUI::GUI(GUI&& copy)
-: m_Device(std::move(copy.m_Device))
-, m_hWnd(copy.m_hWnd)
-, m_pImGuiCtx(copy.m_pImGuiCtx)
-, m_FontTexture(std::move(copy.m_FontTexture))
-, m_RootSignature(std::move(copy.m_RootSignature))
-, m_PipelineState(std::move(copy.m_PipelineState))
+    : m_hWnd(copy.m_hWnd)
+    , m_pImGuiCtx(copy.m_pImGuiCtx)
+    , m_FontTexture(std::move(copy.m_FontTexture))
+    , m_RootSignature(std::move(copy.m_RootSignature))
+    , m_PipelineState(std::move(copy.m_PipelineState))
 {
     copy.m_pImGuiCtx = nullptr;
     copy.m_hWnd = 0;
@@ -77,7 +60,6 @@ GUI& GUI::operator=(GUI&& copy) noexcept
 {
     assert( this != &copy );
 
-    m_Device = std::move(copy.m_Device);
     m_hWnd = copy.m_hWnd;
     m_pImGuiCtx = copy.m_pImGuiCtx;
     m_FontTexture = std::move(copy.m_FontTexture);
@@ -92,9 +74,9 @@ GUI& GUI::operator=(GUI&& copy) noexcept
 
 bool GUI::Initialize( HWND window )
 {
-    assert( m_Device != nullptr );
-
     m_hWnd = window;
+
+    auto& device = Device::Get();
 
     m_pImGuiCtx = ImGui::CreateContext();
     ImGui::SetCurrentContext( m_pImGuiCtx );
@@ -114,12 +96,12 @@ bool GUI::Initialize( HWND window )
     int width, height;
     io.Fonts->GetTexDataAsRGBA32( &pixelData, &width, &height );
 
-    auto d3d12Device = m_Device->GetD3D12Device();
-    auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
+    auto d3d12Device = device.GetD3D12Device();
+    auto commandQueue = device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
     auto fontTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R8G8B8A8_UNORM, width, height );
-    m_FontTexture = m_Device->CreateTexture( fontTextureDesc, nullptr, TextureUsage::Font, L"ImGUI Font Texture" );
+    m_FontTexture = device.CreateTexture( fontTextureDesc, nullptr, TextureUsage::Font, L"ImGUI Font Texture" );
 
     size_t rowPitch, slicePitch;
     GetSurfaceInfo( width, height, DXGI_FORMAT_R8G8B8A8_UNORM, &slicePitch, &rowPitch, nullptr );
@@ -155,7 +137,7 @@ bool GUI::Initialize( HWND window )
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1( RootParameters::NumRootParameters, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags );
 
-    m_RootSignature = m_Device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
+    m_RootSignature = device.CreateRootSignature(rootSignatureDescription.Desc_1_1);
 
     const D3D12_INPUT_ELEMENT_DESC inputLayout[] =
     {

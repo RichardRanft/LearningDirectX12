@@ -50,6 +50,11 @@ public:
         D3D12_GPU_VIRTUAL_ADDRESS GPU;
     };
 
+    /**
+     * @param pageSize The size to use to allocate new pages in GPU memory.
+     */
+    explicit UploadBuffer(size_t pageSize = _2MB);
+
     virtual ~UploadBuffer();
 
     /**
@@ -73,16 +78,12 @@ public:
     void Reset();
 
 protected:
-    /**
-     * @param pageSize The size to use to allocate new pages in GPU memory.
-     */
-    explicit UploadBuffer(std::shared_ptr<Device> device, size_t pageSize = _2MB);
 
 private:
     // A single page for the allocator.
     struct Page
     {
-        Page(std::shared_ptr<Device> device, size_t sizeInBytes);
+        Page(size_t sizeInBytes);
         ~Page();
 
         // Check to see if the page has room to satisfy the requested
@@ -100,7 +101,6 @@ private:
 
     private:
 
-        std::shared_ptr<Device> m_Device;
         Microsoft::WRL::ComPtr<CD3DX12AffinityResource> m_d3d12Resource;
 
         // Base pointer.
@@ -123,7 +123,6 @@ private:
     PagePool m_PagePool;
     PagePool m_AvailablePages;
 
-    std::shared_ptr<Device> m_Device;
     std::shared_ptr<Page> m_CurrentPage;
 
     // The size of each page of memory.

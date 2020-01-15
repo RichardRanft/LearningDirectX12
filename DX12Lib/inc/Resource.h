@@ -43,6 +43,12 @@ class Resource
 {
 public:
     explicit Resource(const std::wstring& name = L"");
+    explicit Resource(const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_CLEAR_VALUE* clearValue = nullptr,
+        const std::wstring& name = L"");
+    explicit Resource(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
+        const std::wstring& name = L"");
+
     Resource(const Resource& copy);
     Resource(Resource&& copy) noexcept;
 
@@ -115,24 +121,12 @@ public:
 protected:
     friend class CommandList;
 
-    Resource(std::shared_ptr<Device> device, const std::wstring& name = L"");
-    Resource(std::shared_ptr<Device> device,
-        const D3D12_RESOURCE_DESC& resourceDesc,
-        const D3D12_CLEAR_VALUE* clearValue = nullptr,
-        const std::wstring& name = L"");
-    Resource(std::shared_ptr<Device> device,
-        Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
-        const std::wstring& name = L"");
-
     // Replace the D3D12 resource
     // Should only be called by the CommandList.
     virtual void SetD3D12Resource(
-        std::shared_ptr<Device> device,
         Microsoft::WRL::ComPtr<CD3DX12AffinityResource> d3d12Resource,
         const D3D12_CLEAR_VALUE* clearValue = nullptr);
 
-
-    std::shared_ptr<Device> m_Device;
     Microsoft::WRL::ComPtr<CD3DX12AffinityResource> m_d3d12Resource;
     D3D12_FEATURE_DATA_FORMAT_SUPPORT m_FormatSupport;
     std::unique_ptr<D3D12_CLEAR_VALUE> m_d3d12ClearValue;

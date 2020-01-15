@@ -6,28 +6,20 @@
 #include <ResourceStateTracker.h>
 
 Resource::Resource(const std::wstring& name)
-: m_Device(nullptr)
-, m_d3d12Resource(nullptr)
-, m_FormatSupport({})
-, m_d3d12ClearValue(nullptr)
-, m_ResourceName(name)
-{}
-
-Resource::Resource(std::shared_ptr<Device> device, const std::wstring& name)
-    : m_Device(device)
-    , m_ResourceName(name)
+    : m_d3d12Resource(nullptr)
     , m_FormatSupport({})
+    , m_d3d12ClearValue(nullptr)
+    , m_ResourceName(name)
 {}
 
-Resource::Resource(std::shared_ptr<Device> device, const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue, const std::wstring& name)
-    : m_Device(device)
+Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue, const std::wstring& name)
 {
     if ( clearValue )
     {
         m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*clearValue);
     }
     
-    auto d3d12device = m_Device->GetD3D12Device();
+    auto d3d12device = Device::Get().GetD3D12Device();
 
     ThrowIfFailed(d3d12device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -44,9 +36,8 @@ Resource::Resource(std::shared_ptr<Device> device, const D3D12_RESOURCE_DESC& re
     SetName(name);
 }
 
-Resource::Resource(std::shared_ptr<Device> device, Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource, const std::wstring& name)
-    : m_Device(device)
-    , m_d3d12Resource(resource)
+Resource::Resource(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource, const std::wstring& name)
+    : m_d3d12Resource(resource)
     , m_FormatSupport({})
 {
     CheckFeatureSupport();
@@ -54,26 +45,25 @@ Resource::Resource(std::shared_ptr<Device> device, Microsoft::WRL::ComPtr<CD3DX1
 }
 
 Resource::Resource(const Resource& copy)
-    : m_Device(copy.m_Device)
-    , m_d3d12Resource(copy.m_d3d12Resource)
+    : m_d3d12Resource(copy.m_d3d12Resource)
     , m_FormatSupport(copy.m_FormatSupport)
     , m_ResourceName(copy.m_ResourceName)
     , m_d3d12ClearValue(std::make_unique<D3D12_CLEAR_VALUE>(*copy.m_d3d12ClearValue))
 {}
 
 Resource::Resource(Resource&& copy) noexcept
-    : m_Device(std::move(copy.m_Device))
-    , m_d3d12Resource(std::move(copy.m_d3d12Resource))
+    : m_d3d12Resource(std::move(copy.m_d3d12Resource))
     , m_FormatSupport(copy.m_FormatSupport)
     , m_ResourceName(std::move(copy.m_ResourceName))
     , m_d3d12ClearValue(std::move(copy.m_d3d12ClearValue))
-{}
+{
+    copy.m_FormatSupport = {};
+}
 
 Resource& Resource::operator=(const Resource& other)
 {
     if ( this != &other )
     {
-        m_Device = other.m_Device;
         m_d3d12Resource = other.m_d3d12Resource;
         m_FormatSupport = other.m_FormatSupport;
         m_ResourceName = other.m_ResourceName;
@@ -90,7 +80,6 @@ Resource& Resource::operator=(Resource&& other) noexcept
 {
     if (this != &other)
     {
-        m_Device = std::move(other.m_Device);
         m_d3d12Resource = std::move(other.m_d3d12Resource);
         m_FormatSupport = other.m_FormatSupport;
         m_ResourceName = std::move(other.m_ResourceName);
@@ -107,11 +96,9 @@ Resource::~Resource()
 {
 }
 
-void Resource::SetD3D12Resource(std::shared_ptr<Device> device,
-    Microsoft::WRL::ComPtr<CD3DX12AffinityResource> d3d12Resource, 
+void Resource::SetD3D12Resource(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> d3d12Resource, 
     const D3D12_CLEAR_VALUE* clearValue)
 {
-    m_Device = device;
     m_d3d12Resource = d3d12Resource;
 
     if ( m_d3d12ClearValue )
@@ -158,7 +145,7 @@ void Resource::CheckFeatureSupport()
     if (m_d3d12Resource)
     {
         auto desc = m_d3d12Resource->GetDesc();
-        auto d3d12Device = m_Device->GetD3D12Device();
+        auto d3d12Device = Device::Get().GetD3D12Device();
 
         m_FormatSupport.Format = desc.Format;
         ThrowIfFailed(d3d12Device->CheckFeatureSupport(
