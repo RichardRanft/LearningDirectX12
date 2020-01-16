@@ -123,9 +123,9 @@ bool Tutorial3::Initialize()
     if (success)
     {
         HWND hWnd = GetWindowHandle();
-        m_Device = Device::CreateDevice();
-        m_SwapChain = m_Device->CreateSwapChain(hWnd);
-        m_GUI = m_Device->CreateGUI(hWnd);
+        Device::CreateDevice();
+        m_SwapChain = SwapChain(hWnd);
+        m_GUI = GUI(hWnd);
 
         XMVECTOR cameraPos = XMVectorSet(0, 5, -20, 1);
         XMVECTOR cameraTarget = XMVectorSet(0, 5, 0, 1);
@@ -194,7 +194,7 @@ bool Tutorial3::LoadContent()
     CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
     rootSignatureDescription.Init_1_1( RootParameters::NumRootParameters, rootParameters, 1, &linearRepeatSampler, rootSignatureFlags );
 
-    m_RootSignature = m_Device->CreateRootSignature(rootSignatureDescription.Desc_1_1);
+    m_RootSignature = RootSignature(rootSignatureDescription.Desc_1_1);
 
     // Setup the pipeline state.
     D3DX12_AFFINITY_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc = {};
@@ -208,11 +208,12 @@ bool Tutorial3::LoadContent()
 
     graphicsPipelineStateDesc.pRootSignature = m_RootSignature.GetRootSignature().Get();
     graphicsPipelineStateDesc.InputLayout = { VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount };
-    graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     graphicsPipelineStateDesc.VS = CD3DX12_SHADER_BYTECODE( vertexShaderBlob.Get() );
     graphicsPipelineStateDesc.PS = CD3DX12_SHADER_BYTECODE( pixelShaderBlob.Get() );
     graphicsPipelineStateDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     graphicsPipelineStateDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+    graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    graphicsPipelineStateDesc.SampleMask = UINT_MAX;
     graphicsPipelineStateDesc.DSVFormat = depthBufferFormat;
     graphicsPipelineStateDesc.NumRenderTargets = 1;
     graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -235,9 +236,9 @@ bool Tutorial3::LoadContent()
     colorClearValue.Color[2] = 0.9f;
     colorClearValue.Color[3] = 1.0f;
 
-    Texture colorTexture = m_Device->CreateTexture( colorDesc, &colorClearValue, 
-                                    TextureUsage::RenderTarget, 
-                                    L"Color Render Target" );
+    Texture colorTexture( colorDesc, &colorClearValue, 
+                          TextureUsage::RenderTarget, 
+                          L"Color Render Target" );
 
     // Create a depth buffer.
     auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D( depthBufferFormat, 
@@ -249,9 +250,9 @@ bool Tutorial3::LoadContent()
     depthClearValue.Format = depthDesc.Format;
     depthClearValue.DepthStencil = { 1.0f, 0 };
 
-    Texture depthTexture = m_Device->CreateTexture( depthDesc, &depthClearValue, 
-                                    TextureUsage::Depth, 
-                                    L"Depth Render Target" );
+    Texture depthTexture( depthDesc, &depthClearValue, 
+                          TextureUsage::Depth, 
+                          L"Depth Render Target" );
 
     // Attach the textures to the render target.
     m_RenderTarget.AttachTexture( AttachmentPoint::Color0, colorTexture );

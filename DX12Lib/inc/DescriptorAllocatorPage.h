@@ -36,7 +36,7 @@
 
 #include "DescriptorAllocation.h"
 
-#include <d3d12.h>
+#include <d3dx12affinity.h>
 
 #include <wrl.h>
 
@@ -50,6 +50,8 @@ class Device;
 class DescriptorAllocatorPage : public std::enable_shared_from_this<DescriptorAllocatorPage>
 {
 public:
+    DescriptorAllocatorPage(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
+
     D3D12_DESCRIPTOR_HEAP_TYPE GetHeapType() const;
 
     /**
@@ -84,8 +86,6 @@ public:
     void ReleaseStaleDescriptors( uint64_t frameNumber );
 
 protected:
-    DescriptorAllocatorPage(std::shared_ptr<Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors);
-
     // Compute the offset of the descriptor handle from the start of the heap.
     uint32_t ComputeOffset( D3D12_CPU_DESCRIPTOR_HANDLE handle );
 
@@ -144,8 +144,6 @@ private:
     FreeListByOffset m_FreeListByOffset;
     FreeListBySize m_FreeListBySize;
     StaleDescriptorQueue m_StaleDescriptors;
-
-    std::shared_ptr<Device> m_Device;
 
     Microsoft::WRL::ComPtr<CD3DX12AffinityDescriptorHeap> m_d3d12DescriptorHeap;
     D3D12_DESCRIPTOR_HEAP_TYPE m_HeapType;

@@ -38,7 +38,10 @@
 class StructuredBuffer : public Buffer
 {
 public:
-    StructuredBuffer();
+    explicit StructuredBuffer(const std::wstring& name = L"");
+    explicit StructuredBuffer(const D3D12_RESOURCE_DESC& desc,
+        size_t numElements, size_t elementSize,
+        const std::wstring& name = L"");
     StructuredBuffer(const StructuredBuffer& copy) = default;
     StructuredBuffer(StructuredBuffer&& copy) = default;
 
@@ -70,7 +73,7 @@ public:
     /**
      * Get the SRV for a resource.
      */
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc = nullptr) const override
     {
         return m_SRV.GetDescriptorHandle();
     }
@@ -88,12 +91,6 @@ public:
     {
         return m_CounterBuffer;
     }
-
-protected:
-    StructuredBuffer(std::shared_ptr<Device> device, const std::wstring& name = L"");
-    StructuredBuffer(std::shared_ptr<Device> device, const D3D12_RESOURCE_DESC& desc,
-        size_t numElements, size_t elementSize,
-        const std::wstring& name = L"");
 
 private:
     size_t m_NumElements;

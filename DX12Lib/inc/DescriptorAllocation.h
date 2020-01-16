@@ -57,7 +57,7 @@ public:
     DescriptorAllocation& operator=( const DescriptorAllocation& ) = delete;
 
     // Move is allowed.
-    DescriptorAllocation( DescriptorAllocation&& allocation );
+    DescriptorAllocation( DescriptorAllocation&& allocation ) noexcept;
     DescriptorAllocation& operator=( DescriptorAllocation&& other ) noexcept;
 
     // Check if this a valid descriptor.

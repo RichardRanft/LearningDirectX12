@@ -5,48 +5,39 @@
 #include <Device.h>
 
 RootSignature::RootSignature() noexcept
-    : m_Device(nullptr)
-    , m_RootSignatureDesc{}
-    , m_RootSignatureVersion(D3D_ROOT_SIGNATURE_VERSION_1_1)
+    : m_RootSignatureDesc{}
     , m_NumDescriptorsPerTable{0}
     , m_SamplerTableBitMask(0)
     , m_DescriptorTableBitMask(0)
 {}
 
-RootSignature::RootSignature(
-    std::shared_ptr<Device> device,
-    const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc, 
-    D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion )
-    : m_Device(device)
-    , m_RootSignatureDesc{}
-    , m_RootSignatureVersion(rootSignatureVersion)
+RootSignature::RootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
+    : m_RootSignatureDesc{}
     , m_NumDescriptorsPerTable{0}
     , m_SamplerTableBitMask(0)
     , m_DescriptorTableBitMask(0)
 {
-    SetRootSignatureDesc(rootSignatureDesc, rootSignatureVersion);
+    SetRootSignatureDesc(rootSignatureDesc);
 }
 
 RootSignature::RootSignature(RootSignature&& other) noexcept
-    : m_Device(std::move(other.m_Device))
-    , m_RootSignatureDesc(other.m_RootSignatureDesc)
-    , m_RootSignatureVersion(other.m_RootSignatureVersion)
+    : m_RootSignatureDesc(other.m_RootSignatureDesc)
     , m_RootSignature(std::move(other.m_RootSignature))
     , m_SamplerTableBitMask(other.m_SamplerTableBitMask)
     , m_DescriptorTableBitMask(other.m_DescriptorTableBitMask)
 {
     std::move(other.m_NumDescriptorsPerTable, other.m_NumDescriptorsPerTable + 32, m_NumDescriptorsPerTable);
+    memset(other.m_NumDescriptorsPerTable, 0, sizeof(other.m_NumDescriptorsPerTable));
 
-    memset(&other.m_RootSignatureDesc, 0, sizeof(D3D12_ROOT_SIGNATURE_DESC1));
-    other.m_RootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+    // TODO: Check if this is sufficient to 0 the structure.
+    other.m_RootSignatureDesc = {};
     other.m_SamplerTableBitMask = 0;
     other.m_DescriptorTableBitMask = 0;
 }
 
 RootSignature::RootSignature(const RootSignature& copy)
-    : m_Device(copy.m_Device)
 {
-    SetRootSignatureDesc(copy.m_RootSignatureDesc, copy.m_RootSignatureVersion);
+    SetRootSignatureDesc(copy.m_RootSignatureDesc);
 }
 
 
@@ -57,38 +48,40 @@ RootSignature::~RootSignature()
 
 RootSignature& RootSignature::operator=(RootSignature&& other) noexcept
 {
-    assert( this != &other );
+    if ( this != &other )
+    {
+        Destroy();
 
-    Destroy();
+        m_RootSignatureDesc = other.m_RootSignatureDesc;
+        m_RootSignature = std::move(other.m_RootSignature);
+        std::move(other.m_NumDescriptorsPerTable, other.m_NumDescriptorsPerTable + 32, m_NumDescriptorsPerTable);
+        memset(other.m_NumDescriptorsPerTable, 0, sizeof(other.m_NumDescriptorsPerTable));
 
-    m_Device = std::move(other.m_Device);
-    m_RootSignatureDesc = other.m_RootSignatureDesc;
-    m_RootSignatureVersion = other.m_RootSignatureVersion;
-    m_RootSignature = std::move(other.m_RootSignature);
-    std::move(other.m_NumDescriptorsPerTable, other.m_NumDescriptorsPerTable + 32, m_NumDescriptorsPerTable);
-    m_SamplerTableBitMask = other.m_SamplerTableBitMask;
-    m_DescriptorTableBitMask = other.m_DescriptorTableBitMask;
+        m_SamplerTableBitMask = other.m_SamplerTableBitMask;
+        m_DescriptorTableBitMask = other.m_DescriptorTableBitMask;
 
-    memset(&other.m_RootSignatureDesc, 0, sizeof(D3D12_ROOT_SIGNATURE_DESC1));
-    other.m_SamplerTableBitMask = 0;
-    other.m_DescriptorTableBitMask = 0;
+        // TODO: Check if this is sufficient to 0 the structure.
+        other.m_RootSignatureDesc = {};
+        other.m_SamplerTableBitMask = 0;
+        other.m_DescriptorTableBitMask = 0;
+    }
 
     return *this;
 }
 
 RootSignature& RootSignature::operator=(const RootSignature& other)
 {
-    assert( this != &other);
-
-    m_Device = other.m_Device;
-
-    SetRootSignatureDesc(other.m_RootSignatureDesc, other.m_RootSignatureVersion);
+    if ( this != &other )
+    {
+        SetRootSignatureDesc(other.m_RootSignatureDesc);
+    }
 
     return *this;
 }
 
 void RootSignature::Destroy()
 {
+    
     for (UINT i = 0; i < m_RootSignatureDesc.NumParameters; ++i)
     {
         const D3D12_ROOT_PARAMETER1& rootParameter = m_RootSignatureDesc.pParameters[i];
@@ -106,8 +99,6 @@ void RootSignature::Destroy()
     m_RootSignatureDesc.pStaticSamplers = nullptr;
     m_RootSignatureDesc.NumStaticSamplers = 0;
 
-    m_RootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-
     m_DescriptorTableBitMask = 0;
     m_SamplerTableBitMask = 0;
 
@@ -115,18 +106,11 @@ void RootSignature::Destroy()
 }
 
 // Perform a deep copy of the root signature description.
-void RootSignature::SetRootSignatureDesc(
-    const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-    D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
-)
+void RootSignature::SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
 {
     // Make sure any previously allocated root signature description is cleaned 
     // up first.
     Destroy();
-
-    assert(m_Device && "Invalid device. Root signature must be created through a device.");
-
-    m_RootSignatureVersion = rootSignatureVersion;
 
     UINT numParameters = rootSignatureDesc.NumParameters;
     D3D12_ROOT_PARAMETER1* pParameters = numParameters > 0 ? new D3D12_ROOT_PARAMETER1[numParameters] : nullptr;
@@ -196,12 +180,12 @@ void RootSignature::SetRootSignatureDesc(
     Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
     ThrowIfFailed(D3DX12SerializeVersionedRootSignature( 
-        &versionRootSignatureDesc, m_RootSignatureVersion, &rootSignatureBlob, &errorBlob));
+        &versionRootSignatureDesc, Device::Get().GetHighestRootSignatureVersion(), &rootSignatureBlob, &errorBlob));
 
-    auto device = m_Device->GetD3D12Device();
+    auto d3d12Device = Device::Get().GetD3D12Device();
 
     // Create the root signature.
-    ThrowIfFailed(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
+    ThrowIfFailed(d3d12Device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
         rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_RootSignature)));
 }
 

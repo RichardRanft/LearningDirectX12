@@ -45,14 +45,16 @@ class RenderTarget;
 class GUI
 {
 public:
-    GUI();
-    GUI(const GUI& copy) = delete;
-    GUI(GUI&& copy);
-
+    GUI(HWND hWnd = NULL);
     virtual ~GUI();
-
-    GUI& operator=(const GUI& copy) = delete;
+        
+    // Moves are allowed.
+    GUI(GUI&& copy);
     GUI& operator=(GUI&& copy) noexcept;
+
+    // Copying is not allowed (since the GUI owns the ImGuiContext)
+    GUI(const GUI& copy) = delete;
+    GUI& operator=(const GUI& copy) = delete;
 
     // Initialize the ImGui context.
     virtual bool Initialize( HWND window );
@@ -66,10 +68,6 @@ public:
 
 	// Set the scaling for this ImGuiContext.
 	void SetScaling(float scale);
-
-protected:
-    friend class Device;
-    GUI(std::shared_ptr<Device> device);
 
 private:
     HWND m_hWnd;

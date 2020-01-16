@@ -138,7 +138,7 @@ void CommandList::ResolveSubresource( Resource& dstRes, const Resource& srcRes, 
 
 void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags )
 {
-    auto device = m_Device->GetD3D12Device();
+    auto d3d12Device = Device::Get().GetD3D12Device();
 
     size_t bufferSize = numElements * elementSize;
 
@@ -149,7 +149,7 @@ void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t element
     }
     else
     {
-        ThrowIfFailed(device->CreateCommittedResource(
+        ThrowIfFailed(d3d12Device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags),
@@ -164,7 +164,7 @@ void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t element
         {
             // Create an upload resource to use as an intermediate buffer to copy the buffer resource 
             ComPtr<CD3DX12AffinityResource> uploadResource;
-            ThrowIfFailed(device->CreateCommittedResource(
+            ThrowIfFailed(d3d12Device->CreateCommittedResource(
                 &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
                 D3D12_HEAP_FLAG_NONE,
                 &CD3DX12_RESOURCE_DESC::Buffer(bufferSize),
@@ -189,7 +189,7 @@ void CommandList::CopyBuffer( Buffer& buffer, size_t numElements, size_t element
         TrackResource(d3d12Resource);
     }
 
-    buffer.SetD3D12Resource( m_Device, d3d12Resource );
+    buffer.SetD3D12Resource( d3d12Resource );
     buffer.CreateViews( numElements, elementSize );
 }
 
@@ -232,7 +232,7 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
     if ( iter != ms_TextureCache.end() )
     {
         texture.SetTextureUsage(textureUsage);
-        texture.SetD3D12Resource(m_Device, iter->second);
+        texture.SetD3D12Resource(iter->second);
         texture.CreateViews();
         texture.SetName(fileName);
     }
@@ -306,11 +306,11 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
                 break;
         }
 
-        auto device = m_Device->GetD3D12Device();
+        auto d3d12Device = Device::Get().GetD3D12Device();
         
         Microsoft::WRL::ComPtr<CD3DX12AffinityResource> textureResource;
 
-        ThrowIfFailed(device->CreateCommittedResource(
+        ThrowIfFailed(d3d12Device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
             D3D12_HEAP_FLAG_NONE,
             &textureDesc,
@@ -319,7 +319,7 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
             IID_PPV_ARGS(&textureResource)));
 
         texture.SetTextureUsage(textureUsage);
-        texture.SetD3D12Resource(m_Device, textureResource);
+        texture.SetD3D12Resource(textureResource);
         texture.CreateViews();
         texture.SetName(fileName);
 
@@ -355,11 +355,13 @@ void CommandList::LoadTextureFromFile( Texture& texture, const std::wstring& fil
 
 void CommandList::GenerateMips( Texture& texture )
 {
+    auto& device = Device::Get();
+
     if ( m_d3d12CommandListType == D3D12_COMMAND_LIST_TYPE_COPY )
     {
         if ( !m_ComputeCommandList )
         {
-            m_ComputeCommandList = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE )->GetCommandList();
+            m_ComputeCommandList = device.GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE )->GetCommandList();
         }
         m_ComputeCommandList->GenerateMips( texture );
         return;
@@ -395,7 +397,7 @@ void CommandList::GenerateMips( Texture& texture )
     if ( !texture.CheckUAVSupport() || 
        ( resourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
     {
-        auto device = m_Device->GetD3D12Device();
+        auto d3d12Device = device.GetD3D12Device();
         // Describe an alias resource that is used to copy the original texture.
         auto aliasDesc = resourceDesc;
         // Placed resources can't be render targets or depth-stencil views.
@@ -413,7 +415,7 @@ void CommandList::GenerateMips( Texture& texture )
         };
 
         // Create a heap that is large enough to store a copy of the original resource.
-        auto allocationInfo = device->GetResourceAllocationInfo(0, _countof(resourceDescs), resourceDescs );
+        auto allocationInfo = d3d12Device->GetResourceAllocationInfo(0, _countof(resourceDescs), resourceDescs );
 
         D3D12_HEAP_DESC heapDesc = {};
         heapDesc.SizeInBytes = allocationInfo.SizeInBytes;
@@ -424,7 +426,7 @@ void CommandList::GenerateMips( Texture& texture )
         heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
 
         ComPtr<CD3DX12AffinityHeap> heap;
-        ThrowIfFailed(device->CreateHeap(&heapDesc, IID_PPV_ARGS(&heap)));
+        ThrowIfFailed(d3d12Device->CreateHeap(&heapDesc, IID_PPV_ARGS(&heap)));
 
         // Make sure the heap does not go out of scope until the command list
         // is finished executing on the command queue.
@@ -433,7 +435,7 @@ void CommandList::GenerateMips( Texture& texture )
         // Create a placed resource that matches the description of the 
         // original resource. This resource is used to copy the original 
         // texture to the UAV compatible resource.
-        ThrowIfFailed(device->CreatePlacedResource(
+        ThrowIfFailed(d3d12Device->CreatePlacedResource(
             heap.Get(),
             0,
             &aliasDesc,
@@ -448,7 +450,7 @@ void CommandList::GenerateMips( Texture& texture )
 
         // Create a UAV compatible resource in the same heap as the alias
         // resource.
-        ThrowIfFailed(device->CreatePlacedResource(
+        ThrowIfFailed(d3d12Device->CreatePlacedResource(
             heap.Get(),
             0,
             &uavDesc,
@@ -473,7 +475,7 @@ void CommandList::GenerateMips( Texture& texture )
         AliasingBarrier(aliasResource, uavResource);
     }
 
-    Texture uavTexture = m_Device->CreateTexture(uavResource, texture.GetTextureUsage());
+    Texture uavTexture(uavResource, texture.GetTextureUsage());
     // Generate mips with the UAV compatible resource.
     GenerateMips_UAV(uavTexture, Texture::IsSRGBFormat(resourceDesc.Format) );
 
@@ -489,7 +491,7 @@ void CommandList::GenerateMips_UAV( Texture& texture, bool isSRGB )
 {
     if ( !m_GenerateMipsPSO )
     {
-        m_GenerateMipsPSO = std::make_unique<GenerateMipsPSOCtor>(m_Device);
+        m_GenerateMipsPSO = std::make_unique<GenerateMipsPSO>();
     }
 
     m_d3d12CommandList->SetPipelineState( m_GenerateMipsPSO->GetPipelineState().Get() );
@@ -581,7 +583,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
     {
         if (!m_ComputeCommandList)
         {
-            m_ComputeCommandList = m_Device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
+            m_ComputeCommandList = Device::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
         }
         m_ComputeCommandList->PanoToCubemap(cubemapTexture, panoTexture);
         return;
@@ -589,10 +591,11 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
 
     if (!m_PanoToCubemapPSO)
     {
-        m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSOCtor>(m_Device);
+        m_PanoToCubemapPSO = std::make_unique<PanoToCubemapPSO>();
     }
 
-    auto device = m_Device->GetD3D12Device();
+    auto& device = Device::Get();
+    auto d3d12Device = device.GetD3D12Device();
 
     auto cubemapResource = cubemapTexture.GetD3D12Resource();
     if (!cubemapResource) return;
@@ -600,7 +603,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
     CD3DX12_RESOURCE_DESC cubemapDesc(cubemapResource->GetDesc());
 
     auto stagingResource = cubemapResource;
-    Texture stagingTexture = m_Device->CreateTexture(stagingResource);
+    Texture stagingTexture(stagingResource);
 
     // If the passed-in resource does not allow for UAV access
     // then create a staging resource that is used to generate
@@ -611,7 +614,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
         stagingDesc.Format = Texture::GetUAVCompatableFormat(cubemapDesc.Format);
         stagingDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-        ThrowIfFailed(device->CreateCommittedResource(
+        ThrowIfFailed(d3d12Device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
             D3D12_HEAP_FLAG_NONE,
             &stagingDesc,
@@ -623,7 +626,7 @@ void CommandList::PanoToCubemap(Texture& cubemapTexture, const Texture& panoText
 
         ResourceStateTracker::AddGlobalResourceState(stagingResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
 
-        stagingTexture.SetD3D12Resource(m_Device, stagingResource);
+        stagingTexture.SetD3D12Resource(stagingResource);
         stagingTexture.CreateViews();
         stagingTexture.SetName(L"Pano to Cubemap Staging Texture");
 
@@ -741,7 +744,7 @@ void CommandList::ClearDepthStencilTexture( const Texture& texture, D3D12_CLEAR_
 
 void CommandList::CopyTextureSubresource( Texture& texture, uint32_t firstSubresource, uint32_t numSubresources, D3D12_SUBRESOURCE_DATA* subresourceData )
 {
-    auto device = m_Device->GetD3D12Device();
+    auto d3d12Device = Device::Get().GetD3D12Device();
     auto destinationResource = texture.GetD3D12Resource();
 
     if ( destinationResource )
@@ -754,7 +757,7 @@ void CommandList::CopyTextureSubresource( Texture& texture, uint32_t firstSubres
 
         // Create a temporary (intermediate) resource for uploading the subresources
         ComPtr<CD3DX12AffinityResource> intermediateResource;
-        ThrowIfFailed( device->CreateCommittedResource(
+        ThrowIfFailed(d3d12Device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer( requiredSize ),

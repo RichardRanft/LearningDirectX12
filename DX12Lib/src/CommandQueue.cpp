@@ -6,21 +6,20 @@
 #include <Device.h>
 #include <ResourceStateTracker.h>
 
-CommandQueue::CommandQueue(std::shared_ptr<Device> _device, D3D12_COMMAND_LIST_TYPE type)
-    : m_Device(_device)
-    , m_FenceValue(0)
+CommandQueue::CommandQueue(D3D12_COMMAND_LIST_TYPE type)
+    : m_FenceValue(0)
     , m_CommandListType(type)
     , m_bProcessInFlightCommandLists(true)
 {
-    auto device = m_Device->GetD3D12Device();
+    auto d3d12Device = Device::Get().GetD3D12Device();
 
     D3D12_COMMAND_QUEUE_DESC desc = {};
     desc.Type = type;
     desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
     desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 
-    ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_d3d12CommandQueue)));
-    ThrowIfFailed(device->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3d12Fence)));
+    ThrowIfFailed(d3d12Device->CreateCommandQueue(&desc, IID_PPV_ARGS(&m_d3d12CommandQueue)));
+    ThrowIfFailed(d3d12Device->CreateFence(m_FenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_d3d12Fence)));
 
     switch ( type )
     {
@@ -88,8 +87,8 @@ struct CommandListCtor : public CommandList
 public:
     typedef CommandList super;
 
-    CommandListCtor(std::shared_ptr<Device> device, D3D12_COMMAND_LIST_TYPE type)
-    : super(device, type)
+    CommandListCtor(D3D12_COMMAND_LIST_TYPE type)
+    : super(type)
     {}
 };
 
@@ -105,7 +104,7 @@ std::shared_ptr<CommandList> CommandQueue::GetCommandList()
     else
     {
         // Otherwise create a new command list.
-        commandList = std::make_shared<CommandListCtor>(m_Device, m_CommandListType);
+        commandList = std::make_shared<CommandListCtor>(m_CommandListType);
     }
 
     return commandList;
@@ -127,7 +126,7 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
     toBeQueued.reserve(commandLists.size() * 2);        // 2x since each command list will have a pending command list.
 
     // Generate mips command lists.
-    std::vector<std::shared_ptr<CommandList> > generateMipsCommandLists;
+    std::vector<std::shared_ptr<CommandList>> generateMipsCommandLists;
     generateMipsCommandLists.reserve( commandLists.size() );
 
     // Command lists that need to be executed.
@@ -173,7 +172,7 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
     // after the initial resource command lists have finished.
     if ( generateMipsCommandLists.size() > 0 )
     {
-        auto computeQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE );
+        auto computeQueue = Device::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COMPUTE );
         computeQueue->Wait( *this );
         computeQueue->ExecuteCommandLists( generateMipsCommandLists );
     }

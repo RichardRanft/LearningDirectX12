@@ -100,8 +100,7 @@ public:
     // Get the format of the attached depth/stencil buffer.
     DXGI_FORMAT GetDepthStencilFormat() const;
 
-private:
-    
+private:    
     std::vector<Texture> m_Textures;
     DirectX::XMUINT2 m_Size;
 };

@@ -77,8 +77,6 @@ public:
      */
     void Reset();
 
-protected:
-
 private:
     // A single page for the allocator.
     struct Page

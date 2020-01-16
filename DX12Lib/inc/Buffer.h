@@ -35,18 +35,19 @@
 class Buffer : public Resource
 {
 public:
+
+protected:
+    Buffer(const std::wstring& name = L"");
+    Buffer(const D3D12_RESOURCE_DESC& desc,
+        size_t numElements, size_t elementSize,
+        const std::wstring& name = L"");
+
+    friend class CommandList;
     /**
      * Create the views for the buffer resource.
      * Used by the CommandList when setting the buffer contents.
      */
     virtual void CreateViews(size_t numElements, size_t elementSize) = 0;
-
-protected:
-    Buffer();
-    Buffer(const std::wstring& name = L"");
-    Buffer(const D3D12_RESOURCE_DESC& desc,
-        size_t numElements, size_t elementSize,
-        const std::wstring& name = L"");
 
 private:
 

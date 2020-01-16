@@ -2,10 +2,6 @@
 
 #include <Buffer.h>
 
-Buffer::Buffer()
-: Resource()
-{}
-
 Buffer::Buffer(const std::wstring& name)
     : Resource(name)
 {}

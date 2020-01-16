@@ -36,7 +36,7 @@
 class VertexBuffer : public Buffer
 {
 public:
-    VertexBuffer();
+    explicit VertexBuffer(const std::wstring& name = L"");
     VertexBuffer(const VertexBuffer& copy) = default;
     VertexBuffer(VertexBuffer&& copy) = default;
 
@@ -75,9 +75,6 @@ public:
     * Get the UAV for a (sub)resource.
     */
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override;
-
-protected:
-    VertexBuffer(std::shared_ptr<Device> device, const std::wstring& name = L"");
 
 private:
     size_t m_NumVertices;

@@ -8,27 +8,25 @@
 #include <ResourceStateTracker.h>
 
 SwapChain::SwapChain()
-: m_Device(nullptr)
-, m_hWnd(0)
-, m_VSync(true)
-, m_IsTearingSupported(false)
-, m_FenceValues{0}
-, m_FrameValues{0}
-, m_FrameCounter(0)
-, m_dxgiSwapChain(nullptr)
-, m_SwapChainEvent(0)
-, m_BufferCount(0)
-, m_CurrentBackBufferIndex(0)
+    : m_hWnd(0)
+    , m_VSync(true)
+    , m_IsTearingSupported(false)
+    , m_FenceValues{0}
+    , m_FrameValues{0}
+    , m_FrameCounter(0)
+    , m_dxgiSwapChain(nullptr)
+    , m_SwapChainEvent(0)
+    , m_BufferCount(0)
+    , m_CurrentBackBufferIndex(0)
 {}
 
-SwapChain::SwapChain(std::shared_ptr<Device> device, HWND hWnd)
-    : m_Device(device)
-    , m_hWnd(hWnd)
+SwapChain::SwapChain(HWND hWnd)
+    : m_hWnd(hWnd)
     , m_VSync(true)
     , m_IsTearingSupported(false)
     , m_FrameCounter(0)
 {
-    uint32_t nodeCount = m_Device->GetNodeCount();
+    uint32_t nodeCount = Device::Get().GetNodeCount();
     uint32_t buffersPerNode = nodeCount > 1 ? 1 : 2;
     m_BufferCount = buffersPerNode * nodeCount;
 
@@ -78,8 +76,9 @@ void SwapChain::CreateSwapChain()
     swapChainDesc.Flags = m_IsTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
     swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
-    auto d3d12Device = m_Device->GetD3D12Device();
-    auto commandQueue = m_Device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto& device = Device::Get();
+    auto d3d12Device = device.GetD3D12Device();
+    auto commandQueue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto d3d12CommandQueue = commandQueue->GetD3D12CommandQueue();
 
     ComPtr<IDXGISwapChain1> swapChain;
@@ -114,7 +113,7 @@ void SwapChain::UpdateRenderTargetViews()
 
         ResourceStateTracker::AddGlobalResourceState(backBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
 
-        m_BackBufferTextures[i] = m_Device->CreateTexture(backBuffer, TextureUsage::RenderTarget, L"Backbuffer Texture");
+        m_BackBufferTextures[i] = Texture(backBuffer, TextureUsage::RenderTarget, L"Backbuffer Texture");
         m_BackBufferTextures[i].CreateViews();
     }
 }
@@ -130,7 +129,7 @@ void SwapChain::Resize(uint32_t width, uint32_t height)
     // Update the client size.
     if (swapChainDesc.BufferDesc.Width != width || swapChainDesc.BufferDesc.Height != height)
     {
-        m_Device->Flush();
+        Device::Get().Flush();
 
         // Release all references to back buffer textures.
         m_RenderTarget.AttachTexture(Color0, Texture());
@@ -173,7 +172,7 @@ void SwapChain::ToggleVSync()
 
 UINT SwapChain::Present(const Texture& texture)
 {
-    auto commandQueue = m_Device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto commandQueue = Device::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = commandQueue->GetCommandList();
 
     auto& backBuffer = m_BackBufferTextures[m_CurrentBackBufferIndex];
@@ -198,13 +197,13 @@ UINT SwapChain::Present(const Texture& texture)
     ThrowIfFailed(m_dxgiSwapChain->Present(syncInterval, presentFlags));
 
     m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->Signal();
-    m_FrameValues[m_CurrentBackBufferIndex] = m_Device->IncrementFrameCounter();
+    m_FrameValues[m_CurrentBackBufferIndex] = Device::IncrementFrameCounter();
 
     m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
 
     commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
 
-    m_Device->ReleaseStaleDescriptors(m_FrameValues[m_CurrentBackBufferIndex]);
+    Device::Get().ReleaseStaleDescriptors(m_FrameValues[m_CurrentBackBufferIndex]);
 
     return m_CurrentBackBufferIndex;
 }

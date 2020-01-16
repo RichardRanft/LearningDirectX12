@@ -36,6 +36,7 @@
 class ConstantBuffer : public Buffer
 {
 public:
+    explicit ConstantBuffer(const std::wstring& name = L"");
     virtual ~ConstantBuffer();
 
     // Inherited from Buffer
@@ -63,7 +64,6 @@ public:
 
 
 protected:
-    ConstantBuffer(std::shared_ptr<Device> device, const std::wstring& name = L"");
 
 private:
     size_t m_SizeInBytes;

@@ -35,7 +35,7 @@
 class IndexBuffer : public Buffer
 {
 public:
-    IndexBuffer();
+    explicit IndexBuffer(const std::wstring& name = L"");
     IndexBuffer(const IndexBuffer& copy) = default;
     IndexBuffer(IndexBuffer&& copy) = default;
 
@@ -43,9 +43,6 @@ public:
 
     IndexBuffer& operator=(const IndexBuffer& copy) = default;
     IndexBuffer& operator=(IndexBuffer&& copy) = default;
-
-    // Inherited from Buffer
-    virtual void CreateViews(size_t numElements, size_t elementSize) override;
 
     size_t GetNumIndicies() const
     {
@@ -76,11 +73,13 @@ public:
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override;
 
 protected:
-    IndexBuffer(std::shared_ptr<Device> device, const std::wstring& name = L"");
+
+    friend class CommandList;
+    // Inherited from Buffer
+    virtual void CreateViews(size_t numElements, size_t elementSize) override;
 
 private:
     size_t m_NumIndicies;
     DXGI_FORMAT m_IndexFormat;
-
     D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
 };

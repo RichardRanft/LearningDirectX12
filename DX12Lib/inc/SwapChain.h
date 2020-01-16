@@ -41,13 +41,14 @@
 #include <wrl.h>
 #include <memory>
 
-class Device;
 class RenderTarget;
 
 class SwapChain
 {
 public:
     SwapChain();
+    explicit SwapChain(HWND hWnd);
+
     SwapChain(const SwapChain& copy) = delete;
     SwapChain(SwapChain&& copy) = default;
 
@@ -85,10 +86,6 @@ public:
     UINT Present(const Texture& texture = Texture());
 
 protected:
-    friend class Device;
-
-    SwapChain(std::shared_ptr<Device> device, HWND hWnd);
-
     // Create the swapchian.
     void CreateSwapChain();
 
@@ -96,7 +93,6 @@ protected:
     void UpdateRenderTargetViews();
 
 private:
-    std::shared_ptr<Device> m_Device;
     HWND m_hWnd;
 
     bool m_VSync;

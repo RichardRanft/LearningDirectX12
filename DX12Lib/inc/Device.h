@@ -51,11 +51,11 @@ public:
      * Create the Graphics device object.
      * The returned device is used to create all device-dependent resources.
      * 
-     * @param nodeMask Specify which nodes to use in CrossFire or SLI Multi-GPU configurations.
+     * @param affinityMask Specify which nodes to use in CrossFire or SLI Multi-GPU configurations.
      * The parameter is a bit pattern which represents the nodes to use. By default, all nodes
      * are active.
      */
-    static Device& CreateDevice(uint32_t nodeMask = UINT_MAX);
+    static void CreateDevice(EAffinityMask::Mask affinityMask = EAffinityMask::AllNodes);
 
     /**
      * Destroy the device instance.
@@ -92,35 +92,19 @@ public:
     }
 
     /**
-     * Get the number of GPU nodes in the SLI configuration.
-     * @see https://docs.microsoft.com/en-us/windows/win32/direct3d12/multi-engine
+     * Get the number of GPU nodes.
      */
-    inline uint32_t GetNodeCount()
-    {
-        return m_NodeCount;
-    }
-
-    /**
-     * Get the node mask for the given node index.
-     */
-    inline uint32_t GetNodeMask(uint32_t nodeIndex = 0) const
-    {
-        nodeIndex = nodeIndex % m_NodeCount;
-        return ( 1 << nodeIndex ) & m_NodeMask;
-    }
-
-    /**
-     * Get the node mask for all active GPU nodes.
-     */
-    inline uint32_t GetAllNodeMask() const
-    {
-        return ( ( 1 << m_NodeCount ) - 1 ) & m_NodeMask;
-    }
+    uint32_t GetNodeCount() const;
 
     /**
      * Check if the requested multisample quality is supported for the given format.
      */
     DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
+
+    D3D_ROOT_SIGNATURE_VERSION GetHighestRootSignatureVersion() const
+    {
+        return m_RootSignatureFeatureData.HighestVersion;
+    }
 
     /**
      * Get the Direct3D 12 device
@@ -157,58 +141,14 @@ public:
      */
     UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
-    /**
-     * Create a swap chain for a given window.
-     * 
-     * @param hWnd The handle to the window to create the swapchain for.
-     */
-     SwapChain CreateSwapChain(HWND hWnd);
-
-     /**
-      * Create a GUI context.
-      *
-      * @param hWnd The handle to the window to create the GUI for.
-      */
-     GUI CreateGUI(HWND hWnd);
-
-    /**
-     * Create a root signature from a root signature description.
-     *
-     * @param rootSignatureDesc Describes the layout of a root signature (version 1.1).
-     */
-    RootSignature CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
-
-    /**
-     * Create a texture from a resource description.
-     *
-     * @param resourceDesc The description of the texture resource.
-     * @param clearValue Optional default clear color. When creating a resoruce
-     * with D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET or D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
-     * you should choose the value with which the clear operation will most commonly be called. 
-     * @param textureUsage How the texture is used. Depending on the texture 
-     * usage, the mipmap generation will differ.
-     * @param name A human-readable name for the texture. Useful for debugging.
-     */
-    Texture CreateTexture(const D3D12_RESOURCE_DESC& desc,
-        const D3D12_CLEAR_VALUE* clearValue = nullptr,
-        TextureUsage textureUsage = TextureUsage::Albedo,
-        const std::wstring& name = L"");
-
-    /**
-     * Create a texture from an existing resource.
-     * 
-     * @param resource The resource to create the texture.
-     * @param textureUsage Describes how the texture is used.
-     * @param name A human-readable name for the texture. Useful for debugging.
-     */
-    Texture CreateTexture(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
-        TextureUsage textureUsage = TextureUsage::Albedo,
-        const std::wstring& name = L"");
-
-
 protected:
-    explicit Device(uint32_t nodeMask);
+    Device() = delete;
+    Device(const Device& copy) = delete;
+    Device(Device&& copy) = delete;
+    Device& operator=(const Device& other) = delete;
+    Device& operator=(Device&& other) = delete;
 
+    explicit Device(EAffinityMask::Mask affinityMask);
     void Init();
 
     Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool bUseWarp);
@@ -216,6 +156,7 @@ protected:
 
 private:
     static const uint32_t MaxNodeCount = 2;
+    EAffinityMask::Mask m_AffinityMask;
 
     Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> m_d3d12Device;
     D3D12_FEATURE_DATA_ROOT_SIGNATURE m_RootSignatureFeatureData;
@@ -225,9 +166,6 @@ private:
     std::shared_ptr<CommandQueue> m_CopyCommandQueue;
 
     std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
-
-    uint32_t m_NodeCount;
-    uint32_t m_NodeMask;
 
     // The frame counter is used for safely releasing dynamic descriptors.
     static std::atomic_uint64_t ms_FrameCounter;

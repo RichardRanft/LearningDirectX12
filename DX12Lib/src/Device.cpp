@@ -9,9 +9,8 @@ std::atomic_uint64_t Device::ms_FrameCounter = 0ull;
 
 static Device* gs_pDevice = nullptr;
 
-Device::Device(uint32_t nodeMask)
-    : m_NodeCount(0)
-    , m_NodeMask(nodeMask)
+Device::Device(EAffinityMask::Mask affinityMask)
+    : m_AffinityMask(affinityMask)
     , m_RootSignatureFeatureData({ D3D_ROOT_SIGNATURE_VERSION_1_1 })
 {
     // Check for DirectX Math library support.
@@ -43,11 +42,7 @@ Device::Device(uint32_t nodeMask)
     if (dxgiAdapter)
     {
         m_d3d12Device = CreateDX12Device(dxgiAdapter);
-        if (m_d3d12Device)
-        {
-            m_NodeCount = std::min(m_d3d12Device->GetNodeCount(), MaxNodeCount);
-        }
-        else
+        if (!m_d3d12Device)
         {
             throw std::exception("Failed to create D3D12 Device.");
         }
@@ -76,10 +71,9 @@ void Device::Init()
     }
 }
 
-Device& Device::CreateDevice(uint32_t nodeMask)
+void Device::CreateDevice(EAffinityMask::Mask affinityMask)
 {
-    if ( !gs_pDevice ) gs_pDevice = new Device(nodeMask);
-    return *gs_pDevice;
+    if ( !gs_pDevice ) gs_pDevice = new Device(affinityMask);
 }
 
 void Device::DestroyDevice()
@@ -143,48 +137,63 @@ Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::CreateDX12Device(Microsoft
     ComPtr<CD3DX12AffinityDevice> affinityDevice;
     ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device6)));
     ThrowIfFailed(D3DX12AffinityCreateLDADevice(d3d12Device6.Get(), &affinityDevice));
+    if (m_AffinityMask > 0)
+    {
+        // TODO: Check if this is working?
+        CD3DX12AffinityDevice::g_CachedNodeMask = m_AffinityMask & affinityDevice->LDAAllNodeMasks();
+    }
     //    NAME_D3D12_OBJECT(d3d12Device2);
 
         // Enable debug messages in debug mode.
 #if defined(_DEBUG)
-    ComPtr<ID3D12InfoQueue> pInfoQueue;
-    if (SUCCEEDED(d3d12Device6.As(&pInfoQueue)))
+    ComPtr<ID3D12Debug> pDebugController;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController))))
     {
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
-
-        // Suppress whole categories of messages
-        //D3D12_MESSAGE_CATEGORY Categories[] = {};
-
-        // Suppress messages based on their severity level
-        D3D12_MESSAGE_SEVERITY Severities[] =
+        ComPtr<ID3D12InfoQueue> pInfoQueue;
+        if (SUCCEEDED(pDebugController.As(&pInfoQueue)))
         {
-            D3D12_MESSAGE_SEVERITY_INFO
-        };
+            pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+            pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+            pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 
-        // Suppress individual messages by their ID
-        D3D12_MESSAGE_ID DenyIds[] = {
-            D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,               // This started happening after updating to an RTX 2080 Ti. I believe this to be an error in the validation layer itself.
-            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
-            D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
-            D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
-        };
+            // Suppress whole categories of messages
+            //D3D12_MESSAGE_CATEGORY Categories[] = {};
 
-        D3D12_INFO_QUEUE_FILTER NewFilter = {};
-        //NewFilter.DenyList.NumCategories = _countof(Categories);
-        //NewFilter.DenyList.pCategoryList = Categories;
-        NewFilter.DenyList.NumSeverities = _countof(Severities);
-        NewFilter.DenyList.pSeverityList = Severities;
-        NewFilter.DenyList.NumIDs = _countof(DenyIds);
-        NewFilter.DenyList.pIDList = DenyIds;
+            // Suppress messages based on their severity level
+            D3D12_MESSAGE_SEVERITY Severities[] =
+            {
+                D3D12_MESSAGE_SEVERITY_INFO
+            };
 
-        ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
+            // Suppress individual messages by their ID
+            D3D12_MESSAGE_ID DenyIds[] = {
+                D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,               // This started happening after updating to an RTX 2080 Ti. I believe this to be an error in the validation layer itself.
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
+                D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
+                D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
+            };
+
+            D3D12_INFO_QUEUE_FILTER NewFilter = {};
+            //NewFilter.DenyList.NumCategories = _countof(Categories);
+            //NewFilter.DenyList.pCategoryList = Categories;
+            NewFilter.DenyList.NumSeverities = _countof(Severities);
+            NewFilter.DenyList.pSeverityList = Severities;
+            NewFilter.DenyList.NumIDs = _countof(DenyIds);
+            NewFilter.DenyList.pIDList = DenyIds;
+
+            ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
+        }
     }
 #endif
 
     return affinityDevice;
 }
+
+uint32_t Device::GetNodeCount() const
+{
+    return CD3DX12AffinityDevice::g_CachedNodeCount;
+}
+
 
 DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const
 {
@@ -258,36 +267,4 @@ void Device::ReleaseStaleDescriptors(uint64_t finishedFrame)
 UINT Device::GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const
 {
     return m_d3d12Device->GetDescriptorHandleIncrementSize(type);
-}
-
-SwapChain Device::CreateSwapChain(HWND hWnd)
-{
-    return SwapChain(hWnd);
-}
-
-GUI Device::CreateGUI(HWND hWnd)
-{
-    GUI gui(hWnd);
-
-    return gui;
-}
-
-RootSignature Device::CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc)
-{
-    return RootSignature(shared_from_this(), rootSignatureDesc, m_RootSignatureFeatureData.HighestVersion);
-}
-
-Texture Device::CreateTexture(const D3D12_RESOURCE_DESC& desc,
-    const D3D12_CLEAR_VALUE* clearValue,
-    TextureUsage textureUsage,
-    const std::wstring& name)
-{
-    return Texture(shared_from_this(), desc, clearValue, textureUsage, name);
-}
-
-Texture Device::CreateTexture(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource,
-    TextureUsage textureUsage,
-    const std::wstring& name)
-{
-    return Texture(shared_from_this(), resource, textureUsage, name);
 }

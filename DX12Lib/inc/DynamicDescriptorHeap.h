@@ -107,7 +107,6 @@ public:
     void Reset();
 
 protected:
-
     void CommitStagedDescriptors(CommandList& commandList, std::function<void(CD3DX12AffinityGraphicsCommandList*, UINT, D3D12_GPU_DESCRIPTOR_HANDLE)> setFunc);
 
 private:

@@ -62,6 +62,8 @@ namespace GenerateMips
 class GenerateMipsPSO
 {
 public:
+    GenerateMipsPSO();
+
     const RootSignature& GetRootSignature() const
     {
         return m_RootSignature;
@@ -78,10 +80,8 @@ public:
     }
 
 protected:
-    GenerateMipsPSO(std::shared_ptr<Device> device);
 
 private:
-    std::shared_ptr<Device> m_Device;
     RootSignature m_RootSignature;
     Microsoft::WRL::ComPtr<CD3DX12AffinityPipelineState> m_PipelineState;
     // Default (no resource) UAV's to pad the unused UAV descriptors.

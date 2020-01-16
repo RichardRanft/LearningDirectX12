@@ -6,11 +6,11 @@
 
 #include <d3dx12.h>
 
-ConstantBuffer::ConstantBuffer(std::shared_ptr<Device> device, const std::wstring& name)
-    : Buffer(device, name)
+ConstantBuffer::ConstantBuffer(const std::wstring& name)
+    : Buffer(name)
     , m_SizeInBytes(0)
 {
-    m_ConstantBufferView = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    m_ConstantBufferView = Device::Get().AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 ConstantBuffer::~ConstantBuffer()
@@ -18,7 +18,7 @@ ConstantBuffer::~ConstantBuffer()
 
 void ConstantBuffer::CreateViews(size_t numElements, size_t elementSize)
 {
-    auto d3d12Device = m_Device->GetD3D12Device();
+    auto d3d12Device = Device::Get().GetD3D12Device();
     m_SizeInBytes = numElements * elementSize;
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC d3d12ConstantBufferViewDesc;

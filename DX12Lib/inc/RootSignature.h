@@ -46,6 +46,7 @@ class RootSignature
 {
 public:
     RootSignature() noexcept;
+    RootSignature(const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc);
     RootSignature(RootSignature&& other) noexcept;
     RootSignature(const RootSignature& copy);
 
@@ -61,10 +62,7 @@ public:
         return m_RootSignature;
     }
 
-    void SetRootSignatureDesc(
-        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
-    );
+    void SetRootSignatureDesc(const D3D12_ROOT_SIGNATURE_DESC1& desc);
 
     const D3D12_ROOT_SIGNATURE_DESC1& GetRootSignatureDesc() const
     {
@@ -74,20 +72,10 @@ public:
     uint32_t GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE descriptorHeapType) const;
     uint32_t GetNumDescriptors(uint32_t rootIndex) const;
 
-protected:
-    friend class Device;
-
-    RootSignature(
-        std::shared_ptr<Device> device,
-        const D3D12_ROOT_SIGNATURE_DESC1& rootSignatureDesc,
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion
-    );
-
 private:
-    std::shared_ptr<Device> m_Device;
-    D3D12_ROOT_SIGNATURE_DESC1 m_RootSignatureDesc;
-    D3D_ROOT_SIGNATURE_VERSION m_RootSignatureVersion;
     Microsoft::WRL::ComPtr<CD3DX12AffinityRootSignature> m_RootSignature;
+
+    D3D12_ROOT_SIGNATURE_DESC1 m_RootSignatureDesc;
 
     // Need to know the number of descriptors per descriptor table.
     // A maximum of 32 descriptor tables are supported (since a 32-bit

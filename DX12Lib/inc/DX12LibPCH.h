@@ -45,7 +45,7 @@
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
-using namespace Microsoft::WRL;
+using Microsoft::WRL::ComPtr;
 
 // DirectX 12 specific headers.
 #include <dxgi1_6.h>

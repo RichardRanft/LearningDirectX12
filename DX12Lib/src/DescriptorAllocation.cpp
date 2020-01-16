@@ -24,7 +24,7 @@ DescriptorAllocation::~DescriptorAllocation()
     Free();
 }
 
-DescriptorAllocation::DescriptorAllocation( DescriptorAllocation&& allocation )
+DescriptorAllocation::DescriptorAllocation( DescriptorAllocation&& allocation ) noexcept
     : m_Descriptor(allocation.m_Descriptor)
     , m_NumHandles(allocation.m_NumHandles)
     , m_DescriptorSize(allocation.m_DescriptorSize)
