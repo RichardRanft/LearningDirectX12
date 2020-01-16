@@ -108,9 +108,7 @@ protected:
     virtual void OnResize(ResizeEventArgs& e) override; 
 
 private:
-    std::shared_ptr<Device> m_Device;
     SwapChain m_SwapChain;
-
     GUI m_GUI;
 
     // Some geometry to render.

@@ -146,7 +146,7 @@ bool Tutorial3::Initialize()
 
 bool Tutorial3::LoadContent()
 {
-    auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
+    auto commandQueue = Device::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_COPY );
     auto commandList = commandQueue->GetCommandList();
 
     // Create a Cube mesh
@@ -204,7 +204,7 @@ bool Tutorial3::LoadContent()
     DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
     // Check the best multisample quality level that can be used for the given back buffer format.
-    DXGI_SAMPLE_DESC sampleDesc = m_Device->GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
+    DXGI_SAMPLE_DESC sampleDesc = Device::Get().GetMultisampleQualityLevels( backBufferFormat, D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT );
 
     graphicsPipelineStateDesc.pRootSignature = m_RootSignature.GetRootSignature().Get();
     graphicsPipelineStateDesc.InputLayout = { VertexPositionNormalTexture::InputElements, VertexPositionNormalTexture::InputElementCount };
@@ -220,7 +220,7 @@ bool Tutorial3::LoadContent()
     graphicsPipelineStateDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     graphicsPipelineStateDesc.SampleDesc = sampleDesc;
 
-    auto d3d12Device = m_Device->GetD3D12Device();
+    auto d3d12Device = Device::Get().GetD3D12Device();
     ThrowIfFailed(d3d12Device->CreateGraphicsPipelineState( &graphicsPipelineStateDesc, IID_PPV_ARGS( &m_PipelineState ) ) );
 
     // Create an off-screen render target with a single color buffer and a depth buffer.
@@ -403,7 +403,7 @@ void Tutorial3::OnRender( RenderEventArgs& e )
 {
     super::OnRender( e );
 
-    auto commandQueue = m_Device->GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
+    auto commandQueue = Device::Get().GetCommandQueue( D3D12_COMMAND_LIST_TYPE_DIRECT );
     auto commandList = commandQueue->GetCommandList();
 
     // Clear the render targets.

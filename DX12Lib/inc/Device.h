@@ -97,6 +97,16 @@ public:
     uint32_t GetNodeCount() const;
 
     /**
+     * Move to the next GPU node in AFR rendering.
+     */
+    void AdvanceToNextNode();
+
+    /**
+     * Get the index of the currently active GPU node.
+     */
+    uint32_t GetActiveNodeIndex() const;
+
+    /**
      * Check if the requested multisample quality is supported for the given format.
      */
     DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;

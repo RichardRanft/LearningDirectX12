@@ -59,7 +59,7 @@ void SwapChain::CreateSwapChain()
 
     BOOL allowTearing = FALSE;
     dxgiFactory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
-
+    m_IsTearingSupported = allowTearing == TRUE;
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = ( clientRect.right - clientRect.left );
@@ -172,7 +172,8 @@ void SwapChain::ToggleVSync()
 
 UINT SwapChain::Present(const Texture& texture)
 {
-    auto commandQueue = Device::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    auto& device = Device::Get();
+    auto commandQueue = device.GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     auto commandList = commandQueue->GetCommandList();
 
     auto& backBuffer = m_BackBufferTextures[m_CurrentBackBufferIndex];
@@ -201,8 +202,9 @@ UINT SwapChain::Present(const Texture& texture)
 
     m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
 
-    commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
+    device.AdvanceToNextNode();
 
+    commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
     Device::Get().ReleaseStaleDescriptors(m_FrameValues[m_CurrentBackBufferIndex]);
 
     return m_CurrentBackBufferIndex;

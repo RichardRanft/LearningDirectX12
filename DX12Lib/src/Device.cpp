@@ -73,7 +73,12 @@ void Device::Init()
 
 void Device::CreateDevice(EAffinityMask::Mask affinityMask)
 {
-    if ( !gs_pDevice ) gs_pDevice = new Device(affinityMask);
+    if ( !gs_pDevice ) 
+    {
+        gs_pDevice = new Device(affinityMask);
+        gs_pDevice->Init();
+    }
+
 }
 
 void Device::DestroyDevice()
@@ -194,6 +199,15 @@ uint32_t Device::GetNodeCount() const
     return CD3DX12AffinityDevice::g_CachedNodeCount;
 }
 
+void Device::AdvanceToNextNode()
+{
+    m_d3d12Device->SwitchToNextNode();
+}
+
+uint32_t Device::GetActiveNodeIndex() const
+{
+    return m_d3d12Device->GetActiveNodeIndex();
+}
 
 DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const
 {
