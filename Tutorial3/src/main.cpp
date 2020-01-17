@@ -6,6 +6,8 @@
 #include <Shlwapi.h>
 
 #include <Application.h>
+#include <Device.h>
+
 #include <Tutorial3.h>
 
 #include <dxgidebug.h>
@@ -42,10 +44,12 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
     }
 
     Application::Create(hInstance);
+    Device::CreateDevice(EAffinityMask::Node0);
     {
         std::shared_ptr<Tutorial3> demo = std::make_shared<Tutorial3>(L"Learning DirectX 12 - Lesson 3", 1280, 720);
         retCode = Application::Get().Run(demo);
     }
+    Device::DestroyDevice();
     Application::Destroy();
 
     atexit(&ReportLiveObjects);

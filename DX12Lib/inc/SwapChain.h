@@ -49,6 +49,8 @@ public:
     SwapChain();
     explicit SwapChain(HWND hWnd);
 
+    ~SwapChain();
+
     SwapChain(const SwapChain& copy) = delete;
     SwapChain(SwapChain&& copy) = default;
 

@@ -36,8 +36,9 @@
 #include <SwapChain.h>
 #include <Texture.h>
 
+#include <atomic>
 #include <memory>
-#include <d3dx12affinity_d3dx12.h>
+#include <d3dx12affinity.h>
 #include <dxgi1_6.h>
 #include <wrl.h>
 

@@ -43,6 +43,13 @@ SwapChain::SwapChain(HWND hWnd)
     UpdateRenderTargetViews();
 }
 
+SwapChain::~SwapChain()
+{
+    // Make sure any commands that may be referencing the swap-chain's 
+    // back buffers have finished before destroying the swap chain.
+    Device::Get().Flush();
+}
+
 // Create the swapchian.
 void SwapChain::CreateSwapChain()
 {

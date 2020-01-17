@@ -145,7 +145,7 @@ Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::CreateDX12Device(Microsoft
     if (m_AffinityMask > 0)
     {
         // TODO: Check if this is working?
-        CD3DX12AffinityDevice::g_CachedNodeMask = m_AffinityMask & affinityDevice->LDAAllNodeMasks();
+        affinityDevice->SetAffinity(m_AffinityMask);
     }
     //    NAME_D3D12_OBJECT(d3d12Device2);
 
@@ -196,7 +196,7 @@ Microsoft::WRL::ComPtr<CD3DX12AffinityDevice> Device::CreateDX12Device(Microsoft
 
 uint32_t Device::GetNodeCount() const
 {
-    return CD3DX12AffinityDevice::g_CachedNodeCount;
+    return m_d3d12Device->GetNodeCount();
 }
 
 void Device::AdvanceToNextNode()

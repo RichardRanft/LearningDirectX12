@@ -123,7 +123,6 @@ bool Tutorial3::Initialize()
     if (success)
     {
         HWND hWnd = GetWindowHandle();
-        Device::CreateDevice();
         m_SwapChain = SwapChain(hWnd);
         m_GUI = GUI(hWnd);
 
@@ -389,6 +388,32 @@ void Tutorial3::OnUpdate( UpdateEventArgs& e )
         l.LinearAttenuation = 0.08f;
         l.QuadraticAttenuation = 0.0f;
     }
+
+    // BEGIN TEST
+    {
+        auto projectionMatrix = m_Camera.get_ProjectionMatrix();
+
+        XMFLOAT4 f0(0.0f, 0.0f, 0.1f, 1.0f);
+        XMFLOAT4 f1(0.0f, 0.0f, 100.0f, 1.0f);
+
+        XMVECTOR v0 = XMLoadFloat4(&f0);
+        XMVECTOR v1 = XMLoadFloat4(&f1);
+
+        v0 = XMVector4Transform(v0, projectionMatrix);
+        v1 = XMVector4Transform(v1, projectionMatrix);
+
+        XMStoreFloat4(&f0, v0);
+        XMStoreFloat4(&f1, v1);
+
+        const float MAX_ERROR = FLT_EPSILON * 4.0f;
+
+        float ndzNear = fabsf(f0.z / f0.w);
+        float ndzFar = fabsf(f1.z / f1.w);
+
+        assert( ndzNear < MAX_ERROR );
+        assert( ndzFar - 1.0f < MAX_ERROR);
+    }
+    // END TEST
 }
 
 void XM_CALLCONV ComputeMatrices( FXMMATRIX model, CXMMATRIX view, CXMMATRIX viewProjection, Mat& mat )
