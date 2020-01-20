@@ -5,6 +5,7 @@ set( SRC_FILES
 )
 
 set( HEADER_FILES
+    inc/Helpers.h
     resource.h
 )
 
