@@ -207,9 +207,8 @@ UINT SwapChain::Present(const Texture& texture)
     m_FenceValues[m_CurrentBackBufferIndex] = commandQueue->Signal();
     m_FrameValues[m_CurrentBackBufferIndex] = Device::IncrementFrameCounter();
 
-    m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
-
     device.AdvanceToNextNode();
+    m_CurrentBackBufferIndex = m_dxgiSwapChain->GetCurrentBackBufferIndex();
 
     commandQueue->WaitForFenceValue(m_FenceValues[m_CurrentBackBufferIndex]);
     Device::Get().ReleaseStaleDescriptors(m_FrameValues[m_CurrentBackBufferIndex]);

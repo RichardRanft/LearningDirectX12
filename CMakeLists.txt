@@ -34,9 +34,19 @@ add_subdirectory( Tutorial1 )
 add_subdirectory( Tutorial2 )
 add_subdirectory( Tutorial3 )
 add_subdirectory( Tutorial4 )
-add_subdirectory( Tutorial5 )
+add_subdirectory( Samples/05-afr )
+
+set_target_properties( 
+    Tutorial1
+    Tutorial2
+    Tutorial3
+    Tutorial4
+    05-afr
+    PROPERTIES
+        FOLDER Samples
+)
 
 # Set the startup project.
 set_directory_properties( PROPERTIES 
-    VS_STARTUP_PROJECT Tutorial5
+    VS_STARTUP_PROJECT 05-afr
 )

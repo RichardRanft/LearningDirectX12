@@ -27,6 +27,10 @@ target_include_directories( Tutorial1
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
+target_compile_definitions( Tutorial1
+    PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX
+)
+
 target_link_libraries( Tutorial1
     d3d12.lib
     dxgi.lib

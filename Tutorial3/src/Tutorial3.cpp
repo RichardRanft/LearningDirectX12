@@ -620,7 +620,19 @@ void Tutorial3::OnRender( RenderEventArgs& e )
     }
 
     // Present
-    m_SwapChain.Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
+    //m_SwapChain.Present( m_RenderTarget.GetTexture(AttachmentPoint::Color0) );
+    {
+        FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+
+        auto commandQueue = Device::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+        auto commandList = commandQueue->GetCommandList();
+
+        commandList->ClearTexture(m_SwapChain.GetRenderTarget().GetTexture(AttachmentPoint::Color0), clearColor);
+
+        commandQueue->ExecuteCommandList(commandList);
+    }
+
+    m_SwapChain.Present();
 }
 
 static bool g_AllowFullscreenToggle = true;

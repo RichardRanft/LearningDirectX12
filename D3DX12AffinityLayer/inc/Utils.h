@@ -189,7 +189,7 @@ inline void DebugLog(wchar_t const* const Format, ...)
     _vsnwprintf_s(WideBuffer, BufferSize, BufferSize - 1, Format, Args);
     va_end(Args);
 
-    OutputDebugString(WideBuffer);
+    OutputDebugStringW(WideBuffer);
 #endif
 }
 
@@ -210,6 +210,6 @@ inline void ReleaseLog(wchar_t const* const Format, ...)
     _vsnwprintf_s(WideBuffer, BufferSize, BufferSize, Format, Args);
     va_end(Args);
 
-    OutputDebugString(WideBuffer);
+    OutputDebugStringW(WideBuffer);
 #endif
 }

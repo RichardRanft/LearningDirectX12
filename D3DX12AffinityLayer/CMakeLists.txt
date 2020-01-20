@@ -58,3 +58,10 @@ add_library( D3DX12AffinityLayer STATIC
 target_include_directories( D3DX12AffinityLayer
     PUBLIC inc
 )
+
+target_link_libraries( D3DX12AffinityLayer
+    PUBLIC d3d12.lib
+    PUBLIC dxgi.lib
+    PUBLIC dxguid.lib
+)
+
