@@ -40,7 +40,7 @@ class Tutorial2 : public Game
 public:
     using super = Game;
 
-    Tutorial2(const std::wstring& name, int width, int height, bool vSync = false);
+    Tutorial2(const std::wstring& name, int width, int height);
     /**
      *  Load content required for the demo.
      */

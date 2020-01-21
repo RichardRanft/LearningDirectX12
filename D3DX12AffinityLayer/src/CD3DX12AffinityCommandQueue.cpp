@@ -124,7 +124,7 @@ void STDMETHODCALLTYPE CD3DX12AffinityCommandQueue::ExecuteCommandLists(
             }
         }
     }
-    ReleaseLog(L"D3DX12AffinityLayer: [event] ExecuteCommandLists\n");
+    //ReleaseLog(L"D3DX12AffinityLayer: [event] ExecuteCommandLists\n");
 }
 
 void STDMETHODCALLTYPE CD3DX12AffinityCommandQueue::SetMarker(
