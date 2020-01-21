@@ -946,6 +946,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
     g_DSVDescriptorHeap = CreateDescriptorHeap(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
 
     g_SwapChainBackBuffers = UpdateRenderTargetViews(g_Device, g_SwapChain, g_RTVDescriptorHeap);
+    g_DepthBuffer = UpdateDepthStenciView(g_Device, g_DSVDescriptorHeap, g_ClientWidth, g_ClientHeight);
 
     // Create a command allocator for each buffered frame.
     for (int i = 0; i < g_NumFrames; ++i)
