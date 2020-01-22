@@ -5,7 +5,7 @@
 #include <shellapi.h> // For CommandLineToArgvW
 #include "../resource.h"
 
-#define ENABLE_DEBUG_LAYER 0
+#define ENABLE_DEBUG_LAYER 1
 
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
@@ -941,6 +941,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
     g_FenceEvent = CreateEventHandle();
     g_TearingSupported = IsTearingSupported();
     g_SwapChain = CreateSwapChain(g_hWnd, g_Device, g_CommandQueue, g_ClientWidth, g_ClientHeight, g_BackBufferCount, g_TearingSupported);
+    g_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<float>(g_ClientWidth), static_cast<float>(g_ClientHeight));
     g_RTVDescriptorHeap = CreateDescriptorHeap(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, g_BackBufferCount);
     // Create the descriptor heap for the depth-stencil view.
     g_DSVDescriptorHeap = CreateDescriptorHeap(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
@@ -966,6 +967,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
         auto uploadAllocator = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_COPY);
         // Create a command list for uploading GPU resource.
         auto uploadCommandList = CreateCommandList(g_Device, uploadAllocator, D3D12_COMMAND_LIST_TYPE_COPY);
+        ThrowIfFailed(uploadCommandList->Reset(uploadAllocator.Get(), nullptr));
 
         // Upload vertex buffer data.
         ComPtr<CD3DX12AffinityResource> intermediateVertexBuffer;
@@ -988,6 +990,8 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
         g_IndexBufferView.BufferLocation = g_IndexBuffer->GetGPUVirtualAddress();
         g_IndexBufferView.Format = DXGI_FORMAT_R16_UINT;
         g_IndexBufferView.SizeInBytes = sizeof(g_Indicies);
+
+        ThrowIfFailed(uploadCommandList->Close());
 
         CD3DX12AffinityCommandList* ppCommandLists[] = { uploadCommandList.Get() };
         uploadCommandQueue->ExecuteCommandLists(1, ppCommandLists);
