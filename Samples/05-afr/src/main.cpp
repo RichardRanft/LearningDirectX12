@@ -5,7 +5,7 @@
 #include <shellapi.h> // For CommandLineToArgvW
 #include "../resource.h"
 
-#define ENABLE_DEBUG_LAYER 1
+#define ENABLE_DEBUG_LAYER 0
 
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
@@ -310,7 +310,7 @@ ComPtr<CD3DX12AffinityDevice> CreateDevice(ComPtr<IDXGIAdapter3> adapter)
     return affinityDevice;
 }
 
-ComPtr<CD3DX12AffinityCommandQueue> CreateCommandQueue(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type)
+ComPtr<CD3DX12AffinityCommandQueue> CreateCommandQueue(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type, UINT affinityMask = EAffinityMask::AllNodes)
 {
     ComPtr<CD3DX12AffinityCommandQueue> commandQueue;
 
@@ -320,33 +320,33 @@ ComPtr<CD3DX12AffinityCommandQueue> CreateCommandQueue(ComPtr<CD3DX12AffinityDev
     desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     desc.NodeMask = 0;
 
-    ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
+    ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue), affinityMask));
 
     return commandQueue;
 }
 
-ComPtr<CD3DX12AffinityCommandAllocator> CreateCommandAllocator(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type)
+ComPtr<CD3DX12AffinityCommandAllocator> CreateCommandAllocator(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type, UINT affinityMask = EAffinityMask::AllNodes )
 {
     ComPtr<CD3DX12AffinityCommandAllocator> commandAllocator;
-    ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+    ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator), affinityMask));
 
     return commandAllocator;
 }
 
-ComPtr<CD3DX12AffinityGraphicsCommandList> CreateCommandList(ComPtr<CD3DX12AffinityDevice> device, ComPtr<CD3DX12AffinityCommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type)
+ComPtr<CD3DX12AffinityGraphicsCommandList> CreateCommandList(ComPtr<CD3DX12AffinityDevice> device, ComPtr<CD3DX12AffinityCommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type, UINT affinityMask = EAffinityMask::AllNodes)
 {
     ComPtr<CD3DX12AffinityGraphicsCommandList> commandList;
-    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
+    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList), affinityMask));
 
     ThrowIfFailed(commandList->Close());
 
     return commandList;
 }
 
-ComPtr<CD3DX12AffinityFence> CreateFence(ComPtr<CD3DX12AffinityDevice> device)
+ComPtr<CD3DX12AffinityFence> CreateFence(ComPtr<CD3DX12AffinityDevice> device, UINT affinityMask = EAffinityMask::AllNodes)
 {
     ComPtr<CD3DX12AffinityFence> fence;
-    ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+    ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence), affinityMask));
 
     return fence;
 }
@@ -417,14 +417,14 @@ ComPtr<CDXGIAffinitySwapChain> CreateSwapChain(HWND hWnd, ComPtr<CD3DX12Affinity
     return affinitySwapChain;
 }
 
-ComPtr<CD3DX12AffinityDescriptorHeap> CreateDescriptorHeap(ComPtr<CD3DX12AffinityDevice> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors )
+ComPtr<CD3DX12AffinityDescriptorHeap> CreateDescriptorHeap(ComPtr<CD3DX12AffinityDevice> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors, EAffinityMask::Mask affinityMask = EAffinityMask::AllNodes )
 {
     ComPtr<CD3DX12AffinityDescriptorHeap> descriptorHeap;
 
     D3D12_DESCRIPTOR_HEAP_DESC desc = {};
     desc.NumDescriptors = numDescriptors;
     desc.Type = type;
-    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
+    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap), affinityMask));
 
     return descriptorHeap;
 }
@@ -565,8 +565,10 @@ void Update()
     auto deltaTime = t1 - t0;
     t0 = t1;
 
-    elapsedSeconds += deltaTime.count() * 1e-9;
-    totalSeconds += elapsedSeconds;
+    auto deltaSeconds = deltaTime.count() * 1e-9;
+    totalSeconds += deltaSeconds;
+
+    elapsedSeconds += deltaSeconds;
     if (elapsedSeconds > 1.0)
     {
         auto fps = frameCounter / elapsedSeconds;
@@ -788,6 +790,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             switch (wParam)
             {
+            case '0':
+                g_Device->SetAffinity(EAffinityMask::AllNodes);
+                break;
+            case '1':
+                g_Device->SetAffinity(EAffinityMask::Node0);
+                break;
+            case '2':
+                g_Device->SetAffinity(EAffinityMask::Node1);
+                break;
+            case '3':
+                g_Device->SetAffinity(EAffinityMask::Node2);
+                break;
+            case '4':
+                g_Device->SetAffinity(EAffinityMask::Node3);
+                break;
             case 'V':
                 g_VSync = !g_VSync;
                 break;
@@ -964,9 +981,9 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
         // Create a command queue for uploading GPU resources.
         auto uploadCommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_COPY);
         // Create a command allocator for uploading GPU resources.
-        auto uploadAllocator = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_COPY);
+        auto uploadAllocator = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_COPY, g_Device->GetNodeMask());
         // Create a command list for uploading GPU resource.
-        auto uploadCommandList = CreateCommandList(g_Device, uploadAllocator, D3D12_COMMAND_LIST_TYPE_COPY);
+        auto uploadCommandList = CreateCommandList(g_Device, uploadAllocator, D3D12_COMMAND_LIST_TYPE_COPY, g_Device->GetNodeMask());
         ThrowIfFailed(uploadCommandList->Reset(uploadAllocator.Get(), nullptr));
 
         // Upload vertex buffer data.

@@ -84,9 +84,9 @@ HRESULT STDMETHODCALLTYPE CD3DX12AffinityObject::SetName(
 }
 
 void STDMETHODCALLTYPE CD3DX12AffinityObject::SetAffinity(
-    UINT AffinityMask)
+    _In_ UINT AffinityMask)
 {
-    mAffinityMask = AffinityMask & GetNodeMask();
+    mAffinityMask = AffinityMask == 0 ? GetNodeMask() : AffinityMask & GetNodeMask();
 }
 
 UINT CD3DX12AffinityObject::AffinityIndexToMask(UINT const Index)
