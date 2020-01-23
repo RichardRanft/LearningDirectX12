@@ -87,12 +87,12 @@ struct CommandListCtor : public CommandList
 public:
     typedef CommandList super;
 
-    CommandListCtor(D3D12_COMMAND_LIST_TYPE type)
-    : super(type)
+    CommandListCtor(D3D12_COMMAND_LIST_TYPE type, uint32_t affinityMask = EAffinityMask::AllNodes)
+    : super(type, affinityMask)
     {}
 };
 
-std::shared_ptr<CommandList> CommandQueue::GetCommandList()
+std::shared_ptr<CommandList> CommandQueue::GetCommandList(uint32_t affinityMask)
 {
     std::shared_ptr<CommandList> commandList;
 
@@ -100,12 +100,19 @@ std::shared_ptr<CommandList> CommandQueue::GetCommandList()
     if ( !m_AvailableCommandLists.Empty() )
     {
         m_AvailableCommandLists.TryPop(commandList);
+        
+    }
+    
+    if (commandList)
+    {
+        commandList->Reset();
     }
     else
     {
         // Otherwise create a new command list.
         commandList = std::make_shared<CommandListCtor>(m_CommandListType);
     }
+
 
     return commandList;
 }
@@ -205,8 +212,10 @@ void CommandQueue::ProccessInFlightCommandLists()
             auto commandList = std::get<1>(commandListEntry);
 
             WaitForFenceValue( fenceValue );
-            
-            commandList->Reset();
+
+            // Don't reset the command list until we know 
+            // which GPU node it will be used on.
+            //commandList->Reset();
 
             m_AvailableCommandLists.Push(commandList);
         }

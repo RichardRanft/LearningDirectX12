@@ -50,7 +50,7 @@ public:
     virtual ~CommandQueue();
 
     // Get an available command list from the command queue.
-    std::shared_ptr<CommandList> GetCommandList();
+    std::shared_ptr<CommandList> GetCommandList(uint32_t affinityMask = EAffinityMask::AllNodes);
 
     // Execute a command list.
     // Returns the fence value to wait for for this command list.

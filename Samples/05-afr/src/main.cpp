@@ -310,7 +310,7 @@ ComPtr<CD3DX12AffinityDevice> CreateDevice(ComPtr<IDXGIAdapter3> adapter)
     return affinityDevice;
 }
 
-ComPtr<CD3DX12AffinityCommandQueue> CreateCommandQueue(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type, UINT affinityMask = EAffinityMask::AllNodes)
+ComPtr<CD3DX12AffinityCommandQueue> CreateCommandQueue(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type)
 {
     ComPtr<CD3DX12AffinityCommandQueue> commandQueue;
 
@@ -318,9 +318,8 @@ ComPtr<CD3DX12AffinityCommandQueue> CreateCommandQueue(ComPtr<CD3DX12AffinityDev
     desc.Type = type;
     desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
     desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    desc.NodeMask = 0;
 
-    ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue), affinityMask));
+    ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
 
     return commandQueue;
 }
@@ -790,21 +789,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             switch (wParam)
             {
-            case '0':
-                g_Device->SetAffinity(EAffinityMask::AllNodes);
-                break;
-            case '1':
-                g_Device->SetAffinity(EAffinityMask::Node0);
-                break;
-            case '2':
-                g_Device->SetAffinity(EAffinityMask::Node1);
-                break;
-            case '3':
-                g_Device->SetAffinity(EAffinityMask::Node2);
-                break;
-            case '4':
-                g_Device->SetAffinity(EAffinityMask::Node3);
-                break;
             case 'V':
                 g_VSync = !g_VSync;
                 break;
@@ -1082,34 +1066,6 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
         pipelineStateDesc.SampleDesc = DefaultSampleDesc();
 
         ThrowIfFailed(g_Device->CreateGraphicsPipelineState(&pipelineStateDesc, IID_PPV_ARGS(&g_PipelineState)));
-
-        //struct PipelineStateStream
-        //{
-        //    CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        //    CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
-        //    CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-        //    CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-        //    CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-        //    CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
-        //    CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        //} pipelineStateStream;
-
-        //D3D12_RT_FORMAT_ARRAY rtvFormats = {};
-        //rtvFormats.NumRenderTargets = 1;
-        //rtvFormats.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-        //pipelineStateStream.pRootSignature = g_RootSignature.Get();
-        //pipelineStateStream.InputLayout = { inputLayout, _countof(inputLayout) };
-        //pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        //pipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vertexShaderBlob.Get());
-        //pipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(pixelShaderBlob.Get());
-        //pipelineStateStream.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-        //pipelineStateStream.RTVFormats = rtvFormats;
-
-        //D3D12_PIPELINE_STATE_STREAM_DESC pipelineStateStreamDesc = {
-        //    sizeof(PipelineStateStream), &pipelineStateStream
-        //};
-        //ThrowIfFailed(device->CreatePipelineState(&pipelineStateStreamDesc, IID_PPV_ARGS(&m_PipelineState)));
     }
 
     g_IsInitialized = true;

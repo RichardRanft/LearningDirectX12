@@ -1573,7 +1573,9 @@ void CD3DX12AffinityDevice::SwitchToNextNode()
     }
 #endif
 
-    g_ActiveNodeIndex = (g_ActiveNodeIndex + 1) % GetNodeCount();
+    do {
+        g_ActiveNodeIndex = (g_ActiveNodeIndex + 1) % GetNodeCount();
+    } while ( ( ( 1 << g_ActiveNodeIndex ) & mAffinityMask ) == 0 );
 }
 
 UINT CD3DX12AffinityDevice::g_ActiveNodeIndex = 0;

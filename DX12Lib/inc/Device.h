@@ -98,6 +98,11 @@ public:
     uint32_t GetNodeCount() const;
 
     /**
+     * Get a node mask representing all GPU nodes available to the system.
+     */
+     uint32_t GetNodeMask() const;
+
+    /**
      * Move to the next GPU node in AFR rendering.
      */
     void AdvanceToNextNode();
@@ -106,6 +111,11 @@ public:
      * Get the index of the currently active GPU node.
      */
     uint32_t GetActiveNodeIndex() const;
+
+    /**
+     * Get the affinity mask of the currently active GPU node.
+     */
+    uint32_t Device::GetActiveNodeMask() const;
 
     /**
      * Check if the requested multisample quality is supported for the given format.

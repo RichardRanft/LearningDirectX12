@@ -199,6 +199,11 @@ uint32_t Device::GetNodeCount() const
     return m_d3d12Device->GetNodeCount();
 }
 
+uint32_t Device::GetNodeMask() const
+{
+    return m_d3d12Device->GetNodeMask();
+}
+
 void Device::AdvanceToNextNode()
 {
     m_d3d12Device->SwitchToNextNode();
@@ -207,6 +212,11 @@ void Device::AdvanceToNextNode()
 uint32_t Device::GetActiveNodeIndex() const
 {
     return m_d3d12Device->GetActiveNodeIndex();
+}
+
+uint32_t Device::GetActiveNodeMask() const
+{
+    return m_d3d12Device->GetActiveNodeMask();
 }
 
 DXGI_SAMPLE_DESC Device::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const

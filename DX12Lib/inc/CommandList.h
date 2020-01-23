@@ -80,6 +80,11 @@ public:
     }
 
     /**
+     * Set the affinity of the command list.
+     */
+    void SetAffinity( uint32_t affinityMask );
+
+    /**
      * Transition a resource to a particular state.
      *
      * @param resource The resource to transition.
@@ -398,7 +403,7 @@ public:
 
 protected:
     friend class CommandQueue;
-    CommandList(D3D12_COMMAND_LIST_TYPE type);
+    CommandList(D3D12_COMMAND_LIST_TYPE type, uint32_t affinityMask = EAffinityMask::AllNodes);
 
 private:
     void TrackResource(Microsoft::WRL::ComPtr<CD3DX12AffinityObject> object);
