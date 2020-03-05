@@ -27,7 +27,7 @@
   *  @date December 9, 2019
   *  @author Jeremiah van Oosten
   *
-  *  @brief The Device class is used abstract the functionality of the D3D12Devcie class.
+  *  @brief The Device class is used to abstract the functionality of the D3D12Devcie class.
   */
 
 #include <DescriptorAllocation.h>

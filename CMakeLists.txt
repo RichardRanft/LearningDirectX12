@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.16.1 ) # Latest version of CMake when this file was created.
+cmake_minimum_required( VERSION 3.17.0 ) # Latest version of CMake when this file was created.
 
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -26,8 +26,10 @@ set_target_properties( assimp IrrXML uninstall UpdateAssimpLibsDebugSymbolsAndDL
         FOLDER assimp 
 )
 
+add_subdirectory( Events )
+add_subdirectory( Platform )
+add_subdirectory( Renderer )
 add_subdirectory( DirectXTex )
-add_subdirectory( D3DX12AffinityLayer )
 add_subdirectory( DX12Lib )
 add_subdirectory( GameFramework )
 add_subdirectory( Tutorial1 )
