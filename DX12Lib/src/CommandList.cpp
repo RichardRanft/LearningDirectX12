@@ -22,14 +22,14 @@
 std::map<std::wstring, CD3DX12AffinityResource* > CommandList::ms_TextureCache;
 std::mutex CommandList::ms_TextureCacheMutex;
 
-CommandList::CommandList(D3D12_COMMAND_LIST_TYPE type)
+CommandList::CommandList(D3D12_COMMAND_LIST_TYPE type, uint32_t affinityMask)
     : m_d3d12CommandListType( type )
 {
     auto d3d12Device = Device::Get().GetD3D12Device();
 
-    ThrowIfFailed(d3d12Device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ) ) );
+    ThrowIfFailed(d3d12Device->CreateCommandAllocator( m_d3d12CommandListType, IID_PPV_ARGS( &m_d3d12CommandAllocator ), affinityMask ) );
     ThrowIfFailed(d3d12Device->CreateCommandList( 0, m_d3d12CommandListType, m_d3d12CommandAllocator.Get(),
-                                              nullptr, IID_PPV_ARGS( &m_d3d12CommandList ) ) );
+                                              nullptr, IID_PPV_ARGS( &m_d3d12CommandList ), affinityMask ) );
 
     m_UploadBuffer = std::make_unique<UploadBuffer>();
 
@@ -44,6 +44,11 @@ CommandList::CommandList(D3D12_COMMAND_LIST_TYPE type)
 
 CommandList::~CommandList()
 {}
+
+void CommandList::SetAffinity(uint32_t affinityMask)
+{
+    m_d3d12CommandList->SetAffinity(affinityMask);
+}
 
 void CommandList::TransitionBarrier(Microsoft::WRL::ComPtr<CD3DX12AffinityResource> resource, D3D12_RESOURCE_STATES stateAfter, UINT subresource, bool flushBarriers)
 {

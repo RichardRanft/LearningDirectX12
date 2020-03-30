@@ -5,7 +5,7 @@
 #include <shellapi.h> // For CommandLineToArgvW
 #include "../resource.h"
 
-#define ENABLE_DEBUG_LAYER 1
+#define ENABLE_DEBUG_LAYER 0
 
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
@@ -318,35 +318,34 @@ ComPtr<CD3DX12AffinityCommandQueue> CreateCommandQueue(ComPtr<CD3DX12AffinityDev
     desc.Type = type;
     desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
     desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    desc.NodeMask = 0;
 
     ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
 
     return commandQueue;
 }
 
-ComPtr<CD3DX12AffinityCommandAllocator> CreateCommandAllocator(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type)
+ComPtr<CD3DX12AffinityCommandAllocator> CreateCommandAllocator(ComPtr<CD3DX12AffinityDevice> device, D3D12_COMMAND_LIST_TYPE type, UINT affinityMask = EAffinityMask::AllNodes )
 {
     ComPtr<CD3DX12AffinityCommandAllocator> commandAllocator;
-    ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+    ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator), affinityMask));
 
     return commandAllocator;
 }
 
-ComPtr<CD3DX12AffinityGraphicsCommandList> CreateCommandList(ComPtr<CD3DX12AffinityDevice> device, ComPtr<CD3DX12AffinityCommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type)
+ComPtr<CD3DX12AffinityGraphicsCommandList> CreateCommandList(ComPtr<CD3DX12AffinityDevice> device, ComPtr<CD3DX12AffinityCommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type, UINT affinityMask = EAffinityMask::AllNodes)
 {
     ComPtr<CD3DX12AffinityGraphicsCommandList> commandList;
-    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
+    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList), affinityMask));
 
     ThrowIfFailed(commandList->Close());
 
     return commandList;
 }
 
-ComPtr<CD3DX12AffinityFence> CreateFence(ComPtr<CD3DX12AffinityDevice> device)
+ComPtr<CD3DX12AffinityFence> CreateFence(ComPtr<CD3DX12AffinityDevice> device, UINT affinityMask = EAffinityMask::AllNodes)
 {
     ComPtr<CD3DX12AffinityFence> fence;
-    ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+    ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence), affinityMask));
 
     return fence;
 }
@@ -417,14 +416,14 @@ ComPtr<CDXGIAffinitySwapChain> CreateSwapChain(HWND hWnd, ComPtr<CD3DX12Affinity
     return affinitySwapChain;
 }
 
-ComPtr<CD3DX12AffinityDescriptorHeap> CreateDescriptorHeap(ComPtr<CD3DX12AffinityDevice> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors )
+ComPtr<CD3DX12AffinityDescriptorHeap> CreateDescriptorHeap(ComPtr<CD3DX12AffinityDevice> device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors, EAffinityMask::Mask affinityMask = EAffinityMask::AllNodes )
 {
     ComPtr<CD3DX12AffinityDescriptorHeap> descriptorHeap;
 
     D3D12_DESCRIPTOR_HEAP_DESC desc = {};
     desc.NumDescriptors = numDescriptors;
     desc.Type = type;
-    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
+    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap), affinityMask));
 
     return descriptorHeap;
 }
@@ -565,8 +564,10 @@ void Update()
     auto deltaTime = t1 - t0;
     t0 = t1;
 
-    elapsedSeconds += deltaTime.count() * 1e-9;
-    totalSeconds += elapsedSeconds;
+    auto deltaSeconds = deltaTime.count() * 1e-9;
+    totalSeconds += deltaSeconds;
+
+    elapsedSeconds += deltaSeconds;
     if (elapsedSeconds > 1.0)
     {
         auto fps = frameCounter / elapsedSeconds;
@@ -964,9 +965,9 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
         // Create a command queue for uploading GPU resources.
         auto uploadCommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_COPY);
         // Create a command allocator for uploading GPU resources.
-        auto uploadAllocator = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_COPY);
+        auto uploadAllocator = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_COPY, g_Device->GetNodeMask());
         // Create a command list for uploading GPU resource.
-        auto uploadCommandList = CreateCommandList(g_Device, uploadAllocator, D3D12_COMMAND_LIST_TYPE_COPY);
+        auto uploadCommandList = CreateCommandList(g_Device, uploadAllocator, D3D12_COMMAND_LIST_TYPE_COPY, g_Device->GetNodeMask());
         ThrowIfFailed(uploadCommandList->Reset(uploadAllocator.Get(), nullptr));
 
         // Upload vertex buffer data.
@@ -1065,34 +1066,6 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
         pipelineStateDesc.SampleDesc = DefaultSampleDesc();
 
         ThrowIfFailed(g_Device->CreateGraphicsPipelineState(&pipelineStateDesc, IID_PPV_ARGS(&g_PipelineState)));
-
-        //struct PipelineStateStream
-        //{
-        //    CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-        //    CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
-        //    CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
-        //    CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-        //    CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-        //    CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
-        //    CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-        //} pipelineStateStream;
-
-        //D3D12_RT_FORMAT_ARRAY rtvFormats = {};
-        //rtvFormats.NumRenderTargets = 1;
-        //rtvFormats.RTFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-        //pipelineStateStream.pRootSignature = g_RootSignature.Get();
-        //pipelineStateStream.InputLayout = { inputLayout, _countof(inputLayout) };
-        //pipelineStateStream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        //pipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vertexShaderBlob.Get());
-        //pipelineStateStream.PS = CD3DX12_SHADER_BYTECODE(pixelShaderBlob.Get());
-        //pipelineStateStream.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-        //pipelineStateStream.RTVFormats = rtvFormats;
-
-        //D3D12_PIPELINE_STATE_STREAM_DESC pipelineStateStreamDesc = {
-        //    sizeof(PipelineStateStream), &pipelineStateStream
-        //};
-        //ThrowIfFailed(device->CreatePipelineState(&pipelineStateStreamDesc, IID_PPV_ARGS(&m_PipelineState)));
     }
 
     g_IsInitialized = true;
